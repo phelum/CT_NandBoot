@@ -1,0 +1,217 @@
+		Stage 1
+
+URB 5		get version
+
+URB 14		get version
+
+URB 23		0103 cmd, read 7E00, len 256, device 00, flags 00, expect all CC
+
+URB 32		get version
+
+URB 41		0101 cmd, write 7E00, len 256, device 00, flags 00, 4 of 00, rest CC
+
+URB 50		get version
+
+
+URB 59		0101 cmd, write 7010, len 512, data at URB 63
+			contains c1 4a 7c , b7 99 d8 42 90 a0
+
+URB 68		0101 cmd, write 7210, len 16, all 00
+
+URB 77		0101 cmd, write 7220, len 0xae0, fes_1-1.fex with lots of nulls after
+
+URB 87		0102 cmd, execute 7220
+
+URB 92		0103 cmd, read 7210, len 16, get 'DRAM' then nulls
+
+
+URB 101		0101 cmd, write 7210, len 16, all nulls
+
+URB 110		0101 cmd, write 2000, len 0xae4, fes_1-2.fex
+
+URB 120		0102 cmd, execute 2000
+
+URB 125		0103 cmd, read 7210, len 16, get 'DRAM\x01' then nulls
+
+URB 134		0103 cmd, read 7010, len 512, data at URB 138, mostly nulls, 
+			contains b7 99 d8 42 90 a0
+
+
+URB 143		0101 cmd, write 40100000, len 0x2000, data at URB 147, 
+			starts with f3 29 00 00 , crc table perhaps ???
+
+URB 152		0103 cmd, read 40100000, len 0x2000, should match URB 147
+
+
+URB 161		0101 cmd, write 7210, len 16, all nulls
+
+URB 170		0101 cmd, write 40200000, send fes.fex
+
+URB 188		0101 cmd, write 7220, len 0x7ac, fes_2.fex
+
+URB 197		0102 cmd, execute 7220
+
+
+		Stage 2
+
+URB 5		0001 cmd, get version
+
+URB 14		0001 cmd, get version
+
+URB 24		0201 command, addr 7e00, len 256, device 00, flags 20
+
+URB 27		get 256 bytes, 4 of 00, 252 of CC
+
+URB 32		0001 cmd, get version
+
+URB 42		0201 command, addr 7e00, len 256, device 00, flags 10
+
+URB 45		write to 7E00, 4 0f 00, 252 of CC
+
+
+URB 51		0201 cmd, write to 40A00000, 2760h bytes, SYS_PARA, 
+			contains c1 4a 7c ,  b7 99 d8 42 90 a0 ,
+			disk bootloader, disk rootfs, bootloader BOOTLOADER_FEX00 VBOOTLOADER_FEX0
+			rootfs ROOTFS_FEX00000 VROOTFS_FEX0000 (data at URB 54)
+
+URB 60		0201 cmd, write to 40360000, len 128, device 00, flags 10, MAGIC_DE_START_0
+
+URB 69		0201 cmd, write to 40430000, len 0x8000, device 00, flags 10, FED_NAND_0000000
+
+URB 123		0201 cmd, write to 40360000, len 128, device 00, flags 10, MAGIC_DE_END_000
+
+URB 132		0202 cmd, execute 40430000 with param 00000031
+
+URB 135		cmd 00 00 A0 40 00 10 A0 40 00 00 00 00
+			9 second delay before okay reply
+
+URB 141		0203 command, repeat until 00 01 at addr 0
+
+URB 150		0204 command, 04 02 00 00 00 04 00 00 - 00
+
+URB 153		read 1024 bytes, mostly nulls, with some 01s and 02s.
+			contains AD DE 94 DA 74 FF FF FF 90 03
+
+
+URB 159		0201 cmd, write to 40023C00, len 12, device 00, flags 10, 12 of 00
+
+URB 168		0201 cmd, write to 40360000, len 128, device 00, flags 10, MAGIC_CRC_START_
+
+URB 177		write to 8000 (nand sector 32768 ?), 01 02 00 00  00 80 00 00  00 00 01 00 20 50 00 00
+			00 80 00 00 = 32768 = sector key
+			00 00 01 00 = 0x10000
+			20 = NAND
+			50 = 40 (first rec) + 10 (write) + not 80 (last rec) + not 20 (read)
+
+URB 180		write to NAND, RFSFAT16_BOOTLOADER_FEX00 (each subsequent write is preceded by
+			a key, len, flags command as above).
+
+URB 1683	0201 cmd, write to 40360000, device 00, flags 10, MAGIC_CRC_EN_000
+
+URB 1689	0201 cmd, read 40023C00, device 00, flags 20, 03 76 61 6A 00 00 00 00 3C C1 21 E7
+			(3c c1 21 e7 is same as VBOOTLOADER file).
+
+URB 1698	0201 cmd, write 40023C00, device 00, flags 10, 12 of 00
+
+URB 1707	0201 cmd, write to 40360000, device 00, flags 10, MAGIC_CRC_START_
+
+URB 1715	0201 cmd, addr 028000, len 10000, device 20, flags 50
+			write to ????, RFSFAT16_ROOTFS_FEX000000
+			each write is preceded by a command specifying the sector key, record size,
+			destination (NAND), and flags.
+
+URB 113175	write to 40360000, MAGIC_CRC_EN_000
+
+URB 113202	write to 40360000, MAGIC_CRC_START_
+
+URB 113208	cmd to specify addr for write, 01 02 00 00  00 00 00 00  00 00 01 00 20 D0 00 00
+
+URB 113211	write to ????, 1234567890___MBR
+			00 00 00 00 = 0 = sector key
+			00 00 01 00 = 0x10000
+			20 = write to NAND
+			50 = 40 (first rec) + 10 (write) + 80 (last rec)
+
+URB 113217	0201 cmd, write to 40360000, device 00, flags 10, MAGIC_CRC_EN_000
+
+URB 113225	0201 cmd, read 40023C00, device 00, flags 20, 0376616A 00000000 A4FD93B0
+
+URB 113235	0205 command, 05 02 00 00 02 00 00 00 - 00 (02 = 2 partitions ?)
+
+
+URB 113241	0201 command, 40600000, len 0x10000, device 00, flags 10
+
+URB 113243	write to 40600000, send UBOOT_0000000000
+
+URB 113303	0201 cmd, write to 40400000, 2760h, SYS_PARA
+			contains c1 4a 7c , b7 99 d8 42 90 a0
+			contains DISK BOOTLOADER and DISK ROOTFS
+
+URB 113313	0201 cmd, write to 40410000, len AC, contains AD DE 94 DA 74 FF FF FF 90 03
+
+URB 113322	0201 cmd, write to 40360000, device 00, flags 10, MAGIC_DE_START_0
+
+URB 113331	0201 cmd, write to 40430000, send UPDATE_BOOT1_000
+
+URB 113384	0201 cmd, write to 40360000, MAGIC_DE_EN_000
+
+URB 113394	0202 cmd, execute 40430000 param 00000011
+
+URB 113397	command 00 00 60 40  00 00 40 40  00 00 41 40  00 00 00 00
+			8ms delay before okay reply
+
+URB 113403	0203 cmd, repeat until 00 01 at addr 0
+
+URB 113502	0204 command, 04 02 00 00 00 04 00 - 00
+
+URB 113505	get UpdateBootxOk
+
+
+URB 113514	write to 40360000, MAGIC_DE_START_0
+
+URB 113523	write to 40600000, send BOOT0_0000000000
+
+URB 113532	write to 40360000, MAGIC_DE_EN_000
+
+URB 113541	write to 40400000, len 2760h, send SYS_PARA
+			contains c1 4a 7c , ff ff ff ff b7 99 d8 42 90 a0
+
+URB 113547	write to 40410000, len AC, contains AD DE 94 DA 74 FF FF FF 90 03
+
+URB 113559	write to 40360000, MAGIC_DE_START_0
+
+URB 113565	write to 40430000, send UPDATE_BOOT0_000
+
+URB 113610	write to 40360000, MAGIC_DE_EN_000
+
+URB 113619	0202 cmd, execute 40430000 param 11
+
+URB 113622	send 0x40600000, 0x40400000, 0x40410000
+
+URB 113625	8ms delay before okay reply
+
+URB 113631	0203 cmd, repeat until 00 01 at URB 113649
+
+URB 113655	0204 command, 04 02 00 00 00 04 00 00 - 00 
+
+URB 113658	read 1024 bytes, contains UpdateBootxOk
+
+
+URB 113664	0001 cmd, get version
+
+URB 113673	0201 cmd, write to 7E04, device 00, flags 10, CD A5 34 12
+
+URB 113682	write to 40360000, MAGIC_DE_START_0
+
+URB 113691	write to 40430000, FET_RESTORE_0000
+
+URB 113703	write to 40360000, MAGIC_DE_EN_000
+
+URB 113709	0202 cmd, exec 40430000 param 00000011
+
+URB 113712	write to 0, 16 of 00
+
+			End of stage 2
+
+
+
