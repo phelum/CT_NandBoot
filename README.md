@@ -9,5 +9,5 @@ This program (called bootfix) will run on a CT (also i386 and probably other sys
 
 The program requires some data files and all are included here.
 
-To run this program, extract the archive to a directory, connect the target CT (must be in FEL mode), and then run ./bootfix and wait till finished (less than one minute).  Most of the output is "URB xxxxxx" lines which relate to records in the original USB monitor file.  There is a notes file that lists my notes about these records.  Connecting a serial monitor to the target CT will provide more details.
+To run this program, connect the target CT (must be in FEL mode), and then run ./bootfix and wait till finished (less than one minute).  Most of the output is "URB xxxxxx" lines which relate to records in the original USB monitor file.  There is a notes file that lists my notes about these records.  Connecting a serial monitor to the target CT will provide more details.
 
