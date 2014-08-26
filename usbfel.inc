@@ -202,7 +202,7 @@ uint32_t aw_fel_get_version (libusb_device_handle *usb)
 			buf.signature, buf.soc_id, soc_name, buf.unknown_0a, buf.protocol,
 			buf.unknown_12, buf.unknown_13, buf.scratchpad, buf.pad[0], buf.pad[1]);
 
-	return (buf.soc_id >> 8);
+	return ((buf.soc_id >> 8) & 0xFFFF);
 }
 
 

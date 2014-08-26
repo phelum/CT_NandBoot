@@ -25,8 +25,9 @@
 #include <unistd.h>
 #include "usbfel.inc"
 
-#define uchar unsigned char
-#define uint  uint32_t
+typedef unsigned char uchar;
+typedef unsigned int  uint;
+
 #define PutNulls(b,l) memset (b, 0, l)
 
 	bool	bShowURBs = true;
@@ -176,7 +177,6 @@ int	stage_1_prep (libusb_device_handle *handle, uchar *buf)
 
 int	install_fes_1_1 (libusb_device_handle *handle, uchar *buf)
 {
-	int  x;
 	FILE *fin;
 
 	ShowURB (63);
@@ -201,22 +201,18 @@ int	install_fes_1_1 (libusb_device_handle *handle, uchar *buf)
 	fread (buf + 2784, 1, 2784, fin);                   // data from file
 	fclose (fin);
 
-	for (x = 0; x < 2784; x++) {
-		if (buf [x] != buf [x + 2784]) {
-			printf ("Buf mismatch at entry %d\n", x);
-			exit (1);
-		}
+	if (memcmp (buf, buf + 2784, 2784)) {
+		printf ("Dump / fes_1-1 file mismatch\n");
+		exit (1);
 	}
 
 // 	aw_fel_write (handle, 0x7220, buf, 0x0ae0);
 	aw_fel_send_file (handle, 0x7220, (char*) "fes_1-1.fex", 4000, 2784);
 
 	aw_fel_read (handle, 0x7220, buf + 2784, 2784);		// sanity test
-	for (x = 0; x < 2784; x++) {
-		if (buf [x] != buf [x + 2784]) {
-			printf ("Readback mismatch at entry %d\n", x);
-			exit (1);
-		}
+	if (memcmp (buf, buf + 2784, 2784)) {
+		printf ("Readback mismatch of fes_1-1\n");
+		exit (1);
 	}
 
 	ShowURB (87);
@@ -244,22 +240,6 @@ int	install_fes_1_2 (libusb_device_handle *handle, uchar *buf)
   	aw_fel_write (handle, 0x7210, buf, 0x10);
 
 	ShowURB (114);
-//			load buffer as per URB 114 (0xae4 = 2788) FES_1-2
-//	memset (buf, 0, 65536);
-//	read_log (buf, 0x0ae4, (char*) "dump114");
-//	if (NULL == (fin = fopen ("fes_1-2.fex", "rb"))) {
-//		perror("Failed to open file to send: ");
-//		exit(1);
-//	}
-//	fread (buf + 2788, 1, 2788, fin);
-//	fclose (fin);
-//	for (x = 0; x < 2788; x++) {
-//		if (buf [x] != buf [x + 2788]) {
-//			printf ("Buf mismatch at entry %d\n", x);
-//			exit (1);
-//		}
-//	}
-//	aw_fel_write (handle, 0x2000, buf, 0x0ae4);
 	aw_fel_send_file (handle, 0x2000, (char*) "fes_1-2.fex");
 
 	ShowURB (120);
@@ -313,20 +293,9 @@ int	install_fes_2 (libusb_device_handle *handle, uchar *buf)
   	aw_fel_write (handle, 0x7210, buf, 0x10);
 
 	ShowURB (174);
-//			load buffer as per URB 174 (0x14448 = 83016)	FES_000000000000
-//	read_log (buf, 0x10000, (char*) "dump174");
-// 	aw_fel_write (handle, 0x40200000, buf, 0x10000);
-
-//	ShowURB (183);
-//			load buffer as per URB 183
-//	read_log (buf, 0x4448, (char*) "dump183");
-//	aw_fel_write (handle, 0x40210000, buf, 0x04448);
 	aw_fel_send_file (handle, 0x40200000, (char*) "fes.fex");
 
 	ShowURB (192);
-//			load buffer as per URB 192 (0x7ac = 1964)		FES_200000000000
-//	read_log (buf, 0x07ac, (char*) "dump192");
-// 	aw_fel_write (handle, 0x7220, buf, 0x07ac);
 	aw_fel_send_file (handle, 0x7220, (char*) "fes_2.fex");
 
 	ShowURB (198);
@@ -349,16 +318,10 @@ int	stage_2_prep (libusb_device_handle *handle, uchar *buf)
 	ShowURB (24);
  	aw_fel2_read (handle, 0x7e00, buf, 0x100, AW_FEL2_DRAM);
 
-	for (x = 0; x < 4; x++) {
-		if (buf [x] != 0x00) {
-			printf ("Non 0x00 at entry %d\n", x);
-			exit (1);
-		}
-	}
-
-	for (x = 4; x < 256; x++) {
-		if (buf [x] != 0xCC) {
-			printf ("Non 0xCC at entry %d\n", x);
+	for (x = 0; x < 256; x++) {
+		if (buf [x] != (x < 4) ? 0x00 : 0xCC) {
+			printf ("Scratchpad incorrect\n");
+			hexdump (buf, 0, 256);
 			exit (1);
 		}
 	}
