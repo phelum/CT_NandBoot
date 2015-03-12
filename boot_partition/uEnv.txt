@@ -1,6 +1,6 @@
 console=tty0
 root=/dev/nand2
-nand_root=${root}
+nand_root=/dev/nand2
 loadbootscript=false
 extraargs=console=ttyS0,115200 audio=EDID:0 disp.screen0_output_mode=EDID:1280x1024p60 \
           rootwait panic=60 rootfstype=ext4
