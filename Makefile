@@ -14,7 +14,7 @@ clean:
 	@rm -vf $(TOOLS)
 
 gzip:
-	tar -acf /mnt/CTNandBoot.tar.gz *
+	tar -acf /mnt/CT_NandBoot.tar.gz *
 
 $(TOOLS): Makefile
 
@@ -22,7 +22,7 @@ LIBUSB = libusb-1.0
 LIBUSB_CFLAGS = `pkg-config --cflags $(LIBUSB)`
 LIBUSB_LIBS = `pkg-config --libs $(LIBUSB)`
 
-bootfix: bootfix.cpp usbfel.inc
+bootfix: bootfix.cpp bootfix.h usbfel.inc usblib.inc
 	$(CC) $(CFLAGS) $(LIBUSB_CFLAGS) $(LDFLAGS) -o $@ $(filter %.cpp,$^) $(LIBS) $(LIBUSB_LIBS)
 
 

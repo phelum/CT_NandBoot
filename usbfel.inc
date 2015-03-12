@@ -48,14 +48,14 @@ static const int AW_USB_WRITE = 0x12;
 
 static const int AW_USB_FEL_BULK_EP_OUT=0x01;
 static const int AW_USB_FEL_BULK_EP_IN=0x82;
-static int timeout = 60000;
+static int aw_timeout = 60000;
 
 void usb_bulk_send(libusb_device_handle *usb, int ep, const void *cdata, int length)
 {
 	uint8_t *data = (uint8_t*) cdata;
 	int rc, sent;
 	while (length > 0) {
-		rc = libusb_bulk_transfer(usb, ep, data, length, &sent, timeout);
+		rc = libusb_bulk_transfer(usb, ep, data, length, &sent, aw_timeout);
 		if (rc != 0) {
 			fprintf(stderr, "libusb usb_bulk_send error %d\n", rc);
 			exit(2);
@@ -70,7 +70,7 @@ void usb_bulk_recv(libusb_device_handle *usb, int ep, void *cdata, int length)
 	uint8_t *data = (uint8_t*) cdata;
 	int rc, recv;
 	while (length > 0) {
-		rc = libusb_bulk_transfer(usb, ep, data, length, &recv, timeout);
+		rc = libusb_bulk_transfer(usb, ep, data, length, &recv, aw_timeout);
 		if (rc != 0) {
 			fprintf(stderr, "usb_bulk_recv error %d\n", rc);
 			exit(2);
@@ -406,6 +406,7 @@ void aw_fel2_0203_until_ok (libusb_device_handle *usb)
 	while (memcmp (buf, "\x00\x01", 2)) {
 		printf ("\r..Wait");
 		fflush (stdout);
+		usleep (10000);
 		aw_fel2_0203 (usb);
 		aw_pad_read (usb, buf, 0x20);
 	}

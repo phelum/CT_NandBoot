@@ -19,71 +19,181 @@
  * user (after booting from an SD card).  If already loaded, the CT will
  * boot automatically after this program has finished.
  *
+ * Booting form NAND requires more files in the boot partition than when
+ * booting from SD card.  For consistency, these extra files can be put
+ * in the SD card partition and will be ignored.
+ *
+ * The required files are:
+ *   /boot.axf
+ *   /boot.ini
+ *   /uEnv.txt
+ *   /script.bin
+ *   /uImage
+ *   /linux/linux.ini
+ *   /linux/u-boot.bin
+ *
+ * uEnv.txt, script.bin, and uImage vary to suit the board and kernel.
+ *
+ * /linux/u-boot.bin is specific for the board type.
+ * CubieTruck needs u-boot.bin size 309340
+ * CubieBoard2 needs u-boot.bin size 302280  
+ *
+ * With SD card boot, the bootloader is stored at sector 16 onwards.  This
+ * bootloader uses uEnv.txt, script.bin, and uImage only.
+ *
+ * With NAND boot, the bootloader runs boot.axf which uses boot.ini then
+ * /linux/linux.ini then runs /linux/u-boot.bin.  This u-boot.bin uses
+ * uEnv.txt, script.bin, and uImage.
+ *
+ * A skeleton boot partition is included.  The relevant u-boot.* file
+ * must be renamed to u-boot.bin.  The script.bin and uImage files must
+ * be added.  The uEnv.txt file will probably require customising.
+ *
+ * u-boot.bin reads uEnv.txt which contains environment updating commands.
+ * Some versions of u-boot.bin are modified to read uEnv.cb2 if the DRAM
+ * size is < 2GB, otherwise they look for uEnv.ct.
+ *
+ * By default, u-boot.bin then reads script.bin to addr 43000000, then
+ * uImage to addr 48000000, then passes control to uImage (the kernel).
+ *
+ * uEnv.txt can also contain U-boot commands and these will be executed
+ * when the file is being processed.  This makes it possible to override
+ * the normal boot process at this stage.
+ *
+ *
+ *
+ *
+ *
+ *
+ *
+ *
+ *
+ *
+ *
  * - Steven Saunderson (check <http://phelum.net/> for contact details).
  */
 
+//#define OLD_EXTRAS
+
 #include <unistd.h>
 #include "usbfel.inc"
+#include <sys/termios.h>
 
-typedef unsigned char uchar;
-typedef unsigned int  uint;
-
-#define PutNulls(b,l) memset (b, 0, l)
-
-	bool	bShowURBs = true;
-	int		rc;
-	libusb_device_handle *handle = NULL;
-	int detached_iface = -1;
+#include "bootfix.h"
 
 
-libusb_device_handle* open_usb (void)
+char	GetYesNo	(char *msg)
 {
-	handle = libusb_open_device_with_vid_pid (NULL, 0x1f3a, 0xefe8);
+	char	cKeycode = 0;
+	struct termios	termios, termios_save;
 
-	if (!handle) {
-		switch (errno) {
-		case EACCES:
-			fprintf (stderr, "ERROR: You don't have permission to access Allwinner USB FEL device\n");
-			break;
-		default:
-			fprintf (stderr, "ERROR: Allwinner USB FEL device not found!\n");
-			break;
-		}
+	tcgetattr (STDIN_FILENO, &termios);
+	termios_save = termios;
+	termios.c_lflag &= ~(ICANON | ECHO);				// special mode
+	tcsetattr (STDIN_FILENO, TCSANOW, &termios);
+
+	printf ("%s [y/n] ? ", msg);
+
+	while (cKeycode != 'n' && cKeycode != 'y')
+		cKeycode = tolower (getchar ());
+
+	printf ("%c\n", cKeycode);
+
+	tcsetattr (STDIN_FILENO, TCSANOW, &termios_save);	// normal mode
+
+	return cKeycode;
+}
+
+
+int		PerhapsQuit		(void)
+{
+	if (!forceable)
 		exit (1);
+
+	if (GetYesNo ((char *) "Serious error, quit program") != 'n')
+		exit (1);
+
+	errors++;
+
+	return 0;
+}
+	
+
+int		GetUSBSpeed				(libusb_device_handle *handle)
+{
+	libusb_device		*pUSB_dev;
+
+	pUSB_dev = libusb_get_device (handle);
+
+	return libusb_get_device_speed (pUSB_dev);
+}
+
+
+int		ShowUSBSpeed			(libusb_device_handle *handle)
+{
+	int		speed = GetUSBSpeed (handle);
+	char	*speeds [] = {(char*) "unknown",		// 0
+						  (char*) "1.5 Mbps",		// 1
+						  (char*) "12 Mbps",		// 2
+						  (char*) "480 Mbps",		// 3
+						  (char*) "5000 Mbps"};		// 4
+
+	printf ("Speed = %s\n", speeds [speed]);
+
+	return speed;
+}
+
+
+libusb_device_handle*	open_usb	(int bFailAllowed = 0)
+{
+	while (0 == (handle = libusb_open_device_with_vid_pid (NULL, 0x1f3a, 0xefe8))) {
+		if (bFailAllowed)
+			return 0;
+
+		switch (errno) {
+			case EACCES:
+				fprintf (stderr, "ERROR: Allwinner USB FEL device access denied\n");
+				break;
+			default:
+				fprintf (stderr, "ERROR: Allwinner USB FEL device not found\n");
+				break;
+		}
+		if (GetYesNo ((char *) "Retry USB device access") != 'y')
+			exit (1);
 	}
 
-	rc = libusb_claim_interface (handle, 0);
+	rc = libusb_claim_interface (handle, 0);			// claim interface
 
 #if defined(__linux__)
-	if (rc != LIBUSB_SUCCESS) {
-		libusb_detach_kernel_driver (handle, 0);
-		detached_iface = 0;
-		rc = libusb_claim_interface (handle, 0);
+	if (rc != LIBUSB_SUCCESS) {							// if claim rejected,
+		libusb_detach_kernel_driver (handle, 0);		// tell kernel to release
+		detached_iface = 0;								// > -1 = restore later
+		rc = libusb_claim_interface (handle, 0);		// try to claim again
 	}
 #endif
 
-	assert (rc == 0);
+	assert (rc == 0);									// die if error
 
 	return handle;
 }
 
 
-int close_usb (libusb_device_handle* handle)
+libusb_device_handle*	close_usb 	(libusb_device_handle* handle)
 {
 	libusb_close (handle);
 
 #if defined(__linux__)
-	if (detached_iface >= 0) {
-		libusb_attach_kernel_driver (handle, detached_iface);
+	if (detached_iface >= 0) {							// detach requested ?
+		libusb_attach_kernel_driver (handle, 0);		// restore status quo
 		detached_iface = -1;
 	}
 #endif
 	
-	return 0;
+	return NULL;
 }
 
 
-void ShowURB (int urb)
+void	ShowURB			(int urb)
 {
     if (bShowURBs)
 		printf ("URB %d\n", urb);
@@ -100,13 +210,12 @@ int	read_log (void *dest, int bytes, char *name)
 	char  *in = line;
 	int   nbyte;
 
-	if (NULL == (fin = fopen(name, "rb"))) {
+	if (NULL == (fin = fopen (name, "rb"))) {
 		perror("Failed to open input file: ");
-		exit(1);
+		exit (1);
 	}
 
 	for (*in = 0x00; bytes > 0; in++) {
-
 		if (*in == 0x00) {
 			if (NULL == fgets (line, 1024, fin)) {
 				perror ("Early EOF on file: ");
@@ -139,15 +248,15 @@ int	stage_1_prep (libusb_device_handle *handle, uchar *buf)
 	int  x;
 
     ShowURB (5);
-	x = aw_fel_get_version (handle);
+	version = aw_fel_get_version (handle);
 
-	if (x != 0x1651) {								// 0x1651 = Cubietruck
-		printf ("Expected ID 0x1651, got %04X\n", x);
-		exit (1);
+	if (version != 0x1651) {						// 0x1651 = Cubietruck
+		printf ("Expected ID 0x1651, got %04X\n", version);
+		PerhapsQuit ();
 	}
 
 	ShowURB (14);
-	aw_fel_get_version (handle);					
+	version = aw_fel_get_version (handle);					
 
 			// URB 23 - 27
 
@@ -157,63 +266,71 @@ int	stage_1_prep (libusb_device_handle *handle, uchar *buf)
 	for (x = 0; x < 256; x++) {
 		if (buf [x] != 0xCC) {
 			printf ("Non 0xCC at entry %d\n", x);
-			exit (1);
+			hexdump (buf, 0, 256);
+			save_file ((char *) "Dump1_000023", buf, 256);
+			PerhapsQuit ();
+			break;
 		}
 	}
 
 	ShowURB (32);
-	aw_fel_get_version (handle);					
+	version = aw_fel_get_version (handle);					
 
 	ShowURB (41);
 	PutNulls (buf, 4);
 	aw_fel_write (handle, 0x7e00, buf, 256);		
 
 	ShowURB (50);
-	aw_fel_get_version (handle);					
+	version = aw_fel_get_version (handle);					
 
 	return 0;
 }
 
 
-int	install_fes_1_1 (libusb_device_handle *handle, uchar *buf)
+int		install_fes_1_1	(libusb_device_handle *handle, uchar *buf)
 {
-	FILE *fin;
-
 	ShowURB (63);
-	read_log (buf, 0x200, (char*) "pt1_000063");
+	read_log (buf, 0x200, FN_DRAM_specs);				// DRAM access specs
 	aw_fel_write (handle, 0x7010, buf, 0x200);
 
 	ShowURB (72);
-	PutNulls (buf, 16);
+	PutNulls (buf, 16);									// clear error log
   	aw_fel_write (handle, 0x7210, buf, 0x10);
 
 	ShowURB (77);
+#ifdef OLD_EXTRAS
 //			Load buffer as per URB 81 (0xae0 = 2784) FES_1-1 with nulls after.
 //			We do lots of sanity checks here (relic from testing).
 	PutNulls (buf, 65536);
 	read_log (buf, 0x0ae0, (char*) "pt1_000081");		// data from log
 
-	if (NULL == (fin = fopen ("fes_1-1.fex", "rb"))) {
-		perror("Failed to open file to send: ");
-		exit(1);
+	FILE *fin;
+
+	if (NULL == (fin = fopen (FN_fes_1_1, "rb"))) {
+		perror ("Failed to open file to send: ");
+		exit (1);
 	}
 
 	fread (buf + 2784, 1, 2784, fin);                   // data from file
 	fclose (fin);
 
-	if (memcmp (buf, buf + 2784, 2784)) {
+	if (memcmp (buf, buf + 2784, 2784)) {				// shouldn't happen
 		printf ("Dump / fes_1-1 file mismatch\n");
-		exit (1);
+		save_file ((char *) "Dump1_000077", buf, 5568);
+		PerhapsQuit ();
 	}
+#endif
 
-// 	aw_fel_write (handle, 0x7220, buf, 0x0ae0);
-	aw_fel_send_file (handle, 0x7220, (char*) "fes_1-1.fex", 4000, 2784);
+	aw_fel_send_file (handle, 0x7220, FN_fes_1_1, 2784, 2784);
 
+#ifdef OLD_EXTRAS
 	aw_fel_read (handle, 0x7220, buf + 2784, 2784);		// sanity test
 	if (memcmp (buf, buf + 2784, 2784)) {
 		printf ("Readback mismatch of fes_1-1\n");
-		exit (1);
+		save_file ((char *) "Dump1_000081", buf + 2784, 2784);
+		PerhapsQuit ();
 	}
+#endif
 
 	ShowURB (87);
 	aw_fel_execute (handle, 0x7220);				
@@ -221,18 +338,20 @@ int	install_fes_1_1 (libusb_device_handle *handle, uchar *buf)
 	usleep (500000);	// need this to avoid error on next USB I/O
 
 	ShowURB (96);
-	aw_fel_read (handle, 0x7210, buf, 16);			// expect 'DRAM' then nulls
+	aw_fel_read (handle, 0x7210, buf, 16);				// expect 'DRAM' then nulls
 
 	if (memcmp (buf, "DRAM\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00", 16)) {
 		perror ("Compare to DRAM lit failed");
-		exit (1);
+		hexdump (buf, 0, 16);
+		save_file ((char *) "Dump1_000096", buf, 16);
+		PerhapsQuit ();
 	}
 
 	return 0;
 }
 
 
-int	install_fes_1_2 (libusb_device_handle *handle, uchar *buf)
+int		install_fes_1_2	(libusb_device_handle *handle, uchar *buf)
 {
 
 	ShowURB (105);
@@ -240,52 +359,67 @@ int	install_fes_1_2 (libusb_device_handle *handle, uchar *buf)
   	aw_fel_write (handle, 0x7210, buf, 0x10);
 
 	ShowURB (114);
-	aw_fel_send_file (handle, 0x2000, (char*) "fes_1-2.fex");
+	aw_fel_send_file (handle, 0x2000, FN_fes_1_2);
 
 	ShowURB (120);
 	aw_fel_execute (handle, 0x2000);				
 
 	ShowURB (129);
-	aw_fel_read (handle, 0x7210, buf, 16);			// expect 'DRAM', 0x01 then nulls
+	aw_fel_read (handle, 0x7210, buf, 16);				// expect 'DRAM', 0x01 then nulls
 
 	if (memcmp (buf, "DRAM\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00", 16)) {
 		perror ("Compare to DRAM1 lit failed");
-		exit (1);
+		hexdump (buf, 0, 16);
+		save_file ((char *) "Dump1_000129", buf, 16);
+		PerhapsQuit ();
 	}
 
 	ShowURB (138);
-	aw_fel_read (handle, 0x7010, buf, 0x200);		// expect as per URB 138
+	aw_fel_read (handle, 0x7010, buf, 0x200);			// expect as per URB 138
 	read_log (buf + 0x200, 0x0200, (char*) "pt1_000138");
+
+	if ((buf [0x31] == 0x10) && (buf [0x49] == 0x04)) {	// CB2 rather than CT ?
+		buf [0x31] = buf [0x231];
+		buf [0x49] = buf [0x249];
+		printf ("Cubieboard2 detected\n");
+  		CB2_mode = 1;
+//		FN_boot0_nand = (char*) "BOOT0_0000000000_CB2";
+//		FN_boot1_nand = (char*) "UBOOT_0000000000_CB2";
+		if (forceable)
+			save_file ((char *) "Dump1_000138", buf, 0x200);
+	}
 
 	if (memcmp (buf, buf + 0x200, 0x200)) {
 		perror ("Compare to pt1_000138 failed");
-		exit (1);
+		save_file ((char *) "Dump1_000138", buf, 0x200);
+		PerhapsQuit ();
 	}
 
 	return 0;
 }
 
 
-int	send_crc_table (libusb_device_handle *handle, uchar *buf)
+int		send_crc_table	(libusb_device_handle *handle, uchar *buf)
 {
 
 	ShowURB (147);
-	read_log (buf, 0x2000, (char*) "pt1_000147");
+	read_log (buf, 0x2000, FN_CRC_table);
   	aw_fel_write (handle, 0x40100000, buf, 0x2000);			
 
 	ShowURB (153);
     //			read it back to make sure it's correct
   	aw_fel_read (handle, 0x40100000, buf + 0x2000, 0x2000);	
 	if (memcmp (buf, buf + 0x2000, 0x2000)) {
-		perror ("Compare to pt1_000147 failed");
-		exit (1);
+		perror ("Compare to pt1_000153 failed");
+		save_file ((char *) "Dump1_000153", buf + 0x2000, 0x2000);
+		PerhapsQuit ();
 	}
 
 	return 0;
 }
 
 
-int	install_fes_2 (libusb_device_handle *handle, uchar *buf)
+int		install_fes_2	(libusb_device_handle *handle, uchar *buf)
 {
 
 	ShowURB (165);
@@ -293,10 +427,10 @@ int	install_fes_2 (libusb_device_handle *handle, uchar *buf)
   	aw_fel_write (handle, 0x7210, buf, 0x10);
 
 	ShowURB (174);
-	aw_fel_send_file (handle, 0x40200000, (char*) "fes.fex");
+	aw_fel_send_file (handle, 0x40200000, FN_fes);
 
 	ShowURB (192);
-	aw_fel_send_file (handle, 0x7220, (char*) "fes_2.fex");
+	aw_fel_send_file (handle, 0x7220, FN_fes_2);
 
 	ShowURB (198);
 	aw_fel_execute (handle, 0x7220);						
@@ -305,15 +439,25 @@ int	install_fes_2 (libusb_device_handle *handle, uchar *buf)
 }
 
 
-int	stage_2_prep (libusb_device_handle *handle, uchar *buf)
+int		stage_2_prep	(libusb_device_handle *handle, uchar *buf)
 {
 	int  x;
 
+	if (errors) {
+		printf ("Due to previous errors it might not be safe to continue.\n");
+		PerhapsQuit ();
+	}
+
 	ShowURB (5);
-	aw_fel_get_version (handle);
+	version = aw_fel_get_version (handle);
+
+	if (version != 0x1610) {						// 0x1610 = flash mode
+		printf ("Expected ID 0x1610, got %04X\n", version);
+		PerhapsQuit ();
+	}
 
 	ShowURB (14);
-	aw_fel_get_version (handle);
+	version = aw_fel_get_version (handle);
 
 	ShowURB (24);
  	aw_fel2_read (handle, 0x7e00, buf, 0x100, AW_FEL2_DRAM);
@@ -322,12 +466,14 @@ int	stage_2_prep (libusb_device_handle *handle, uchar *buf)
 		if (buf [x] != (x < 4) ? 0x00 : 0xCC) {
 			printf ("Scratchpad incorrect\n");
 			hexdump (buf, 0, 256);
-			exit (1);
+			save_file ((char *) "Dump2_000024", buf, 256);
+			PerhapsQuit ();
+			break;
 		}
 	}
 
 	ShowURB (32);
-	aw_fel_get_version (handle);
+	version = aw_fel_get_version (handle);
 
 	ShowURB (42);
 	aw_fel2_write (handle, 0x7e00, buf, 0x100, AW_FEL2_DRAM);
@@ -336,21 +482,31 @@ int	stage_2_prep (libusb_device_handle *handle, uchar *buf)
 }
 
 
-int	install_fed_nand (libusb_device_handle *handle, uchar *buf)
+int		GetConfigRec		(uchar *buf)
+{
+	read_log (buf, 0x2760, (char*) "pt2_000054");
+
+	if (CB2_mode)
+		buf [0x218] = 0x04;
+		
+	return 0x2760;
+}
+
+
+int		install_fed_nand	(libusb_device_handle *handle, uchar *buf)
 {
 
 	ShowURB (51);
-	read_log (buf, 0x2760, (char*) "pt2_000054");
-	aw_fel2_write (handle, 0x40a00000, buf, 0x2760, AW_FEL2_DRAM);
+	aw_fel2_write (handle, 0x40a00000, buf, GetConfigRec (buf), AW_FEL2_DRAM);
 
 	ShowURB (60);
-	aw_fel2_send_file (handle, 0x40360000, AW_FEL2_DRAM, (char*) "magic_de_start.fex");
+	aw_fel2_send_file (handle, 0x40360000, AW_FEL2_DRAM, FN_magic_de_start);
 
 	ShowURB (69);
-	aw_fel2_send_file (handle, 0x40430000, AW_FEL2_DRAM, (char*) "FED_NAND_0000000");
+	aw_fel2_send_file (handle, 0x40430000, AW_FEL2_DRAM, FN_fed_nand);
 
 	ShowURB (123);
-	aw_fel2_send_file (handle, 0x40360000, AW_FEL2_DRAM, (char*) "magic_de_end.fex");
+	aw_fel2_send_file (handle, 0x40360000, AW_FEL2_DRAM, FN_magic_de_end);
 
 	ShowURB (132);
 	aw_fel2_exec (handle, 0x40430000, 0x31);
@@ -365,15 +521,20 @@ int	install_fed_nand (libusb_device_handle *handle, uchar *buf)
 	aw_fel2_0204 (handle, 0x0400);
 
 	ShowURB (153);
-	aw_pad_read (handle, buf, 0x0400);          // what info is here ?
+	aw_pad_read (handle, buf, 0x0400);					// DRAM config ?
+	memcpy (DRAM_config, buf + 32, 172);            	// will send back later
+#ifdef OLD_EXTRAS
 	hexdump (buf, 0, 256);
+#endif
+	if (forceable)
+		save_file ((char *) "Dump2_000153", buf, 256);
 
 	return 0;
 }
 
 
-int DownloadPartition (libusb_device_handle *handle, char *fid,
-						uint32_t sector, uint32_t sectors = 0)
+int		DownloadPartition	(libusb_device_handle *handle, char *fid,
+							uint32_t sector, uint32_t sectors = 0)
 {
 	char	*buf = (char*) malloc (65536);
 	FILE	*fin;
@@ -394,7 +555,7 @@ int DownloadPartition (libusb_device_handle *handle, char *fid,
 		exit(1);
 	}
 
-	aw_fel2_send_file (handle, 0x40360000, AW_FEL2_DRAM, (char*) "magic_cr_start.fex");
+	aw_fel2_send_file (handle, 0x40360000, AW_FEL2_DRAM, FN_magic_cr_start);
 
 	printf ("Sending %s...", fid);
 	fflush (stdout);
@@ -432,7 +593,7 @@ int DownloadPartition (libusb_device_handle *handle, char *fid,
 	printf ("done\n");
 	fclose (fin);
 
-	aw_fel2_send_file (handle, 0x40360000, AW_FEL2_DRAM, (char*) "magic_cr_end.fex");
+	aw_fel2_send_file (handle, 0x40360000, AW_FEL2_DRAM, FN_magic_cr_end);
 
 	free (buf);
 
@@ -440,23 +601,23 @@ int DownloadPartition (libusb_device_handle *handle, char *fid,
 }
 
 
-int	send_partitions_and_MBR (libusb_device_handle *handle, uchar *buf)
+int		send_partitions_and_MBR	(libusb_device_handle *handle, uchar *buf)
 {
 	return 0;									// nothing here !!!
 
 	PutNulls (buf, 12);
 	aw_fel2_write (handle, 0x40023c00, buf, 0x0c, AW_FEL2_DRAM);	// reset CRC
-	DownloadPartition (handle, (char*) "RFSFAT16_BOOTLOADER_FEX00", 0x8000);
+	DownloadPartition (handle, (char*) "bootloader.fex", 0x8000);
 	aw_fel2_read  (handle, 0x40023c00, buf, 0x0c, AW_FEL2_DRAM);	// read CRC
 
 	PutNulls (buf, 12);
 	aw_fel2_write (handle, 0x40023c00, buf, 0x0c, AW_FEL2_DRAM);	// reset CRC
-	DownloadPartition (handle, (char*) "RFSFAT16_ROOTFS_FEX000000", 0x028000);
+	DownloadPartition (handle, (char*) "rootfs.fex", 0x028000);
 //	aw_fel2_read  (handle, 0x40023c00, buf, 0x0c, AW_FEL2_DRAM);	// read CRC
 
 //	PutNulls (buf, 12);
 //	aw_fel2_write (handle, 0x40023c00, buf, 0x0c, AW_FEL2_DRAM);	// reset CRC
-	DownloadPartition (handle, (char*) "1234567890___MBR", 0x00);
+	DownloadPartition (handle, (char*) "sunxi_mbr.fex", 0x00);
 	aw_fel2_read  (handle, 0x40023c00, buf, 0x0c, AW_FEL2_DRAM);	// read CRC
 
 	aw_fel2_0205  (handle, 0x02);									// 2 partitions ?
@@ -465,27 +626,26 @@ int	send_partitions_and_MBR (libusb_device_handle *handle, uchar *buf)
 }
 
 
-int	install_uboot (libusb_device_handle *handle, uchar *buf)
+int		install_boot1	(libusb_device_handle *handle, uchar *buf)
 {
 	ShowURB (113241);
-	aw_fel2_send_file (handle, 0x40600000, AW_FEL2_DRAM, (char*) "UBOOT_0000000000");
+
+	aw_fel2_send_file (handle, 0x40600000, AW_FEL2_DRAM, FN_boot1_nand);
 
 	ShowURB (113303);
-	read_log (buf, 0x2760, (char*) "pt2_113307");				// = pt2_000054
-	aw_fel2_write (handle, 0x40400000, buf, 0x2760, AW_FEL2_DRAM);
+	aw_fel2_write (handle, 0x40400000, buf, GetConfigRec (buf), AW_FEL2_DRAM);
 
-	ShowURB (113547);
-	read_log (buf, 0x00ac, (char*) "pt2_113316");
-	aw_fel2_write (handle, 0x40410000, buf, 0x00ac, AW_FEL2_DRAM);
+	ShowURB (113316);
+	aw_fel2_write			(handle, 0x40410000, DRAM_config, 0x00ac, AW_FEL2_DRAM);
 
 	ShowURB (113322);
-	aw_fel2_send_file (handle, 0x40360000, AW_FEL2_DRAM, (char*) "magic_de_start.fex");
+	aw_fel2_send_file (handle, 0x40360000, AW_FEL2_DRAM, FN_magic_de_start);
 
 	ShowURB (113331);
-	aw_fel2_send_file (handle, 0x40430000, AW_FEL2_DRAM, (char*) "UPDATE_BOOT1_000");
+	aw_fel2_send_file (handle, 0x40430000, AW_FEL2_DRAM, FN_update_boot1);
 
 	ShowURB (113384);
-	aw_fel2_send_file (handle, 0x40360000, AW_FEL2_DRAM, (char*) "magic_de_end.fex");
+	aw_fel2_send_file (handle, 0x40360000, AW_FEL2_DRAM, FN_magic_de_end);
 
 	ShowURB (113394);
 	aw_fel2_exec (handle, 0x40430000, 0x11);
@@ -502,40 +662,41 @@ int	install_uboot (libusb_device_handle *handle, uchar *buf)
 	ShowURB (113505);
 	aw_pad_read (handle, buf, 0x0400);
 	printf ("%s\n", &buf [24]);
-	if (strcmp ((char*) &buf [24], "updateBootxOk000"))
+	if (strcmp ((char*) &buf [24], "updateBootxOk000")) {
 		hexdump (buf, 0, 1024);
+		save_file ((char *) "Dump2_113505", buf, 1024);
+	}
 
 	return 0;
 }
 
 
-int	install_boot0 (libusb_device_handle *handle, uchar *buf)
+int		install_boot0	(libusb_device_handle *handle, uchar *buf)
 {
 	ShowURB (113514);
-	aw_fel2_send_file (handle, 0x40360000, AW_FEL2_DRAM, (char*) "magic_de_start.fex");
+	aw_fel2_send_file (handle, 0x40360000, AW_FEL2_DRAM, FN_magic_de_start);
 
 	ShowURB (113523);
-	aw_fel2_send_file (handle, 0x40600000, AW_FEL2_DRAM, (char*) "BOOT0_0000000000");
+
+	aw_fel2_send_file (handle, 0x40600000, AW_FEL2_DRAM, FN_boot0_nand);
 
 	ShowURB (113532);
-	aw_fel2_send_file (handle, 0x40360000, AW_FEL2_DRAM, (char*) "magic_de_end.fex");
+	aw_fel2_send_file (handle, 0x40360000, AW_FEL2_DRAM, FN_magic_de_end);
 
 	ShowURB (113541);
-	read_log (buf, 0x2760, (char*) "pt2_113541");				// = pt2_000054
-	aw_fel2_write (handle, 0x40400000, buf, 0x2760, AW_FEL2_DRAM);
+	aw_fel2_write (handle, 0x40400000, buf, GetConfigRec (buf), AW_FEL2_DRAM);
 
 	ShowURB (113547);
-	read_log (buf, 0x00ac, (char*) "pt2_113550");
-	aw_fel2_write (handle, 0x40410000, buf, 0x00ac, AW_FEL2_DRAM);
+	aw_fel2_write			(handle, 0x40410000, DRAM_config, 0x00ac, AW_FEL2_DRAM);
 
 	ShowURB (113559);
-	aw_fel2_send_file (handle, 0x40360000, AW_FEL2_DRAM, (char*) "magic_de_start.fex");
+	aw_fel2_send_file (handle, 0x40360000, AW_FEL2_DRAM, FN_magic_de_start);
 
 	ShowURB (113565);
-	aw_fel2_send_file (handle, 0x40430000, AW_FEL2_DRAM, (char*) "UPDATE_BOOT0_000");
+	aw_fel2_send_file (handle, 0x40430000, AW_FEL2_DRAM, FN_update_boot0);
 
 	ShowURB (113610);
-	aw_fel2_send_file (handle, 0x40360000, AW_FEL2_DRAM, (char*) "magic_de_end.fex");
+	aw_fel2_send_file (handle, 0x40360000, AW_FEL2_DRAM, FN_magic_de_end);
 
 	ShowURB (113619);
 	aw_fel2_exec (handle, 0x40430000, 0x11);
@@ -552,29 +713,31 @@ int	install_boot0 (libusb_device_handle *handle, uchar *buf)
 	ShowURB (113658);
 	aw_pad_read (handle, buf, 0x0400);
 	printf ("%s\n", &buf [24]);
-	if (strcmp ((char*) &buf [24], "updateBootxOk000"))
+	if (strcmp ((char*) &buf [24], "updateBootxOk000")) {
 		hexdump (buf, 0, 1024);
+		save_file ((char *) "Dump2_113658", buf, 1024);
+	}
 
 	return 0;
 }
 
 
-int	restore_system (libusb_device_handle *handle, uchar *buf)
+int		restore_system	(libusb_device_handle *handle, uchar *buf)
 {
 	ShowURB (113664);
-	aw_fel_get_version (handle);
+	version = aw_fel_get_version (handle);
 
 	ShowURB (113673);
 	aw_fel2_write (handle, 0x7e04, (char*) "\xcd\xa5\x34\x12", 0x04, AW_FEL2_DRAM);
 
 	ShowURB (113682);
-	aw_fel2_send_file (handle, 0x40360000, AW_FEL2_DRAM, (char*) "magic_de_start.fex");
+	aw_fel2_send_file (handle, 0x40360000, AW_FEL2_DRAM, FN_magic_de_start);
 
 	ShowURB (113691);
-	aw_fel2_send_file (handle, 0x40430000, AW_FEL2_DRAM, (char*) "FET_RESTORE_0000");
+	aw_fel2_send_file (handle, 0x40430000, AW_FEL2_DRAM, FN_fet_restore);
 
 	ShowURB (113703);
-	aw_fel2_send_file (handle, 0x40360000, AW_FEL2_DRAM, (char*) "magic_de_end.fex");
+	aw_fel2_send_file (handle, 0x40360000, AW_FEL2_DRAM, FN_magic_de_end);
 
 	ShowURB (113709);
 	aw_fel2_exec (handle, 0x40430000, 0x11);
@@ -583,14 +746,14 @@ int	restore_system (libusb_device_handle *handle, uchar *buf)
 	PutNulls (buf, 16);
 	aw_pad_write (handle, buf, 0x10);
 
-//	aw_fel_get_version (handle);					// added by me, still in flash mode
-                                                    // even though restore done.
 	return 0;
 }
 
 
-int	stage_1 (libusb_device_handle *handle, uchar *buf)
+int		stage_1			(libusb_device_handle *handle, uchar *buf)
 {
+	ShowUSBSpeed			(handle);					// 12 Mbps here
+
 	printf ("Start stage 1\n");
 
 	stage_1_prep (handle, buf);
@@ -609,8 +772,10 @@ int	stage_1 (libusb_device_handle *handle, uchar *buf)
 }
 
 
-int	stage_2 (libusb_device_handle *handle, uchar *buf)
+int		stage_2			(libusb_device_handle *handle, uchar *buf)
 {
+	ShowUSBSpeed			(handle);					// 480 Mbps now
+
 	printf ("Start stage 2\n");
 
 	stage_2_prep (handle, buf);
@@ -619,7 +784,7 @@ int	stage_2 (libusb_device_handle *handle, uchar *buf)
 
 	send_partitions_and_MBR (handle, buf);				// not done yet !!!
 
-	install_uboot (handle, buf);
+	install_boot1 (handle, buf);
 
 	install_boot0 (handle, buf);
 
@@ -631,7 +796,10 @@ int	stage_2 (libusb_device_handle *handle, uchar *buf)
 }
 
 
-int main (void)
+#include "usblib.inc"
+
+
+int		main			(int argc, char * argv [])
 {
 	int x;
 	uchar *buf = (uchar*) malloc (65536);
@@ -639,25 +807,37 @@ int main (void)
 	rc = libusb_init (NULL);
 	assert (rc == 0);
 
-	handle = open_usb ();
-	stage_1 (handle, buf);
-	close_usb (handle);
-	
-	printf ("Waiting for 10 seconds");
-  	fflush (stdout);
-	for (x = 0; x < 10; x++) {
-		usleep (1000000);
-		printf (".");
-		fflush (stdout);
+	if (argc > 1) {
+		if (strcmp (argv [1], (char *) "-t") == 0) {
+			USBTests (buf);
+			goto bye;
+		}
+		if (strcmp (argv [1], (char *) "-x") == 0)
+			forceable = 1;
 	}
-	printf ("\n");
 
-	handle = open_usb ();
+	handle = open_usb ();								// stage 1
+	stage_1 (handle, buf);
+	handle = close_usb (handle);
+	
+	printf ("Re-opening");								// stage 2
+  	fflush (stdout);
+	for (x = 0; !handle; x++) {
+		usleep (1000000);								// wait 1 sec
+		printf (".");
+	  	fflush (stdout);
+		handle = open_usb (x < 10);						// try to open
+	}
+	printf ("done\n");
 	stage_2 (handle, buf);
-	close_usb (handle);
+	handle = close_usb (handle);
 
 	printf ("All done\n");
 
+bye:
+	libusb_exit (NULL);
+
 	return 0;
 }
+
 

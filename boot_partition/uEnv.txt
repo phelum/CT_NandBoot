@@ -1,0 +1,9 @@
+console=tty0
+root=/dev/nand2
+nand_root=${root}
+loadbootscript=false
+extraargs=console=ttyS0,115200 audio=EDID:0 disp.screen0_output_mode=EDID:1280x1024p60 \
+          rootwait panic=60 rootfstype=ext4
+script=script.bin
+kernel=uImage
+machid=0x10bb
