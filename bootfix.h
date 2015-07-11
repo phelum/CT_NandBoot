@@ -13,6 +13,7 @@ typedef unsigned int  uint;
 	int					CB2_mode = 0;				// specials for CB2 ?
 	int					version = 0;				// 0x1610 = flash mode
 	uchar				DRAM_config [172];
+	uchar				RAM_256MB_count = 8;		// 8 = 2GB = CubieTruck
 
 	char				*FN_DRAM_specs		= (char*) "pt1_000063";
 	char				*FN_fes_1_1			= (char*) "fes_1-1.fex";

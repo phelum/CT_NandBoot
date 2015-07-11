@@ -61,15 +61,6 @@
  * the normal boot process at this stage.
  *
  *
- *
- *
- *
- *
- *
- *
- *
- *
- *
  * - Steven Saunderson (check <http://phelum.net/> for contact details).
  */
 
@@ -378,22 +369,34 @@ int		install_fes_1_2	(libusb_device_handle *handle, uchar *buf)
 	aw_fel_read (handle, 0x7010, buf, 0x200);			// expect as per URB 138
 	read_log (buf + 0x200, 0x0200, (char*) "pt1_000138");
 
-	if ((buf [0x31] == 0x10) && (buf [0x49] == 0x04)) {	// CB2 rather than CT ?
-		buf [0x31] = buf [0x231];
-		buf [0x49] = buf [0x249];
-		printf ("Cubieboard2 detected\n");
-  		CB2_mode = 1;
-//		FN_boot0_nand = (char*) "BOOT0_0000000000_CB2";
-//		FN_boot1_nand = (char*) "UBOOT_0000000000_CB2";
-		if (forceable)
-			save_file ((char *) "Dump1_000138", buf, 0x200);
+	if ((buf [0x31] != buf [0x231]) && (buf [0x49] != buf [0x249])) {
+		if (buf [0x31] == (buf [0x49] * 4)) {
+			buf [0x231] = buf [0x31];
+			buf [0x249] = buf [0x49];
+		}
 	}
+
+	if ((buf [0x31] == 0x10) && (buf [0x49] == 0x04)) {	// CB2 rather than CT ?
+//		buf [0x231] = buf [0x31];
+//		buf [0x249] = buf [0x49];
+//		printf ("1GB RAM detected\n");
+		CB2_mode = 1;
+	}
+
+//	if ((buf [0x31] == 0x04) && (buf [0x49] == 0x01)) {	// 256MB RAM ?
+//		buf [0x231] = buf [0x31];
+//		buf [0x249] = buf [0x49];
+//		printf ("256MB RAM detected\n");
+//	}
 
 	if (memcmp (buf, buf + 0x200, 0x200)) {
 		perror ("Compare to pt1_000138 failed");
 		save_file ((char *) "Dump1_000138", buf, 0x200);
 		PerhapsQuit ();
 	}
+
+	RAM_256MB_count = buf [0x49];
+	printf ("%dMB RAM detected\n", RAM_256MB_count * 256);
 
 	return 0;
 }
@@ -433,7 +436,7 @@ int		install_fes_2	(libusb_device_handle *handle, uchar *buf)
 	aw_fel_send_file (handle, 0x7220, FN_fes_2);
 
 	ShowURB (198);
-	aw_fel_execute (handle, 0x7220);						
+	aw_fel_execute (handle, 0x7220);
 
 	return 0;
 }
@@ -486,9 +489,11 @@ int		GetConfigRec		(uchar *buf)
 {
 	read_log (buf, 0x2760, (char*) "pt2_000054");
 
-	if (CB2_mode)
-		buf [0x218] = 0x04;
-		
+//	if (CB2_mode)
+//		buf [0x218] = 0x04;
+
+	buf [0x218] = RAM_256MB_count;
+
 	return 0x2760;
 }
 
