@@ -196,13 +196,13 @@ int		USBTests				(uchar *buf)
 
 	aw_fel2_0204			(handle, 0x0400);			// must pad_read after 0204
 	aw_pad_read				(handle, buf, 0x0400);
-	memcpy (DRAM_config, buf + 32, 172);            	// will send buf+32 len 172 back
+	memcpy (&NandInfo, buf, sizeof (NandInfo));        	// will send buf+32 len 172 back
 
 	aw_fel2_send_file		(handle, 0x40600000, AW_FEL2_DRAM, (char*) "boot1_nand.fex");
 
 	aw_fel2_write			(handle, 0x40400000, buf, GetConfigRec (buf), AW_FEL2_DRAM);
 
-	aw_fel2_write			(handle, 0x40410000, DRAM_config, 0x00ac, AW_FEL2_DRAM);
+	aw_fel2_write			(handle, 0x40410000, ((char*) &NandInfo) + 32, 0x00ac, AW_FEL2_DRAM);
 
 	aw_fel2_send_file		(handle, 0x40360000, AW_FEL2_DRAM, (char*) "magic_de_start.fex");
 	aw_fel2_send_file		(handle, 0x40430000, AW_FEL2_DRAM, (char*) "update_boot1.axf");
@@ -225,7 +225,7 @@ int		USBTests				(uchar *buf)
 
 	aw_fel2_write			(handle, 0x40400000, buf, GetConfigRec (buf), AW_FEL2_DRAM);
 
-	aw_fel2_write			(handle, 0x40410000, DRAM_config, 0x00ac, AW_FEL2_DRAM);
+	aw_fel2_write			(handle, 0x40410000, ((char*) &NandInfo) + 32, 0x00ac, AW_FEL2_DRAM);
 
 	aw_fel2_send_file		(handle, 0x40360000, AW_FEL2_DRAM, (char*) "magic_de_start.fex");
 	aw_fel2_send_file		(handle, 0x40430000, AW_FEL2_DRAM, (char*) "update_boot0.axf");

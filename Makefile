@@ -22,7 +22,7 @@ LIBUSB = libusb-1.0
 LIBUSB_CFLAGS = `pkg-config --cflags $(LIBUSB)`
 LIBUSB_LIBS = `pkg-config --libs $(LIBUSB)`
 
-bootfix: bootfix.cpp bootfix.h usbfel.inc usblib.inc
+bootfix: bootfix.cpp bootfix.h usbfel.inc usblib.inc nand_part.h nand_part.inc
 	$(CC) $(CFLAGS) $(LIBUSB_CFLAGS) $(LDFLAGS) -o $@ $(filter %.cpp,$^) $(LIBS) $(LIBUSB_LIBS)
 
 

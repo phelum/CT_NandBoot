@@ -1,6 +1,10 @@
 	CTNandBoot
 
-Sets Cubietruck (and now CubieBoard2 also) to allow Linux boot from NAND.
+Sets Cubietruck (and now CubieBoard2 also) to allow Linux boot from NAND.  Also can save
+and restore user NAND and also create the MBR and download partitions.  See further down
+for details on these new features.
+
+	Fixing boot0, boot1.
 
 One problem with CTs is that one has to run PhoenixSuit and download an image (e.g. Linaro)
 just to change some code so the CT to boot from NAND.
@@ -45,3 +49,29 @@ then runs /linux/u-boot.bin.  This u-boot.bin uses uEnv.txt, script.bin, and uIm
 A skeleton boot partition is included.  The script.bin and uImage files must be added.
 The uEnv.txt file will probably require customising.
 
+	Saving and restoring all NAND.
+
+<pre>
+"./bootfix -r" will save all NAND to a file called NAND.DAT.
+"./bootfix -r <fid>" will save all NAND to the specified file.
+
+"./bootfix -w" will load NAND from a file called NAND.DAT.
+"./bootfix -w <fid>" will load all NAND from the specified file.
+</pre>
+
+	Creating MBR and partitions.
+
+Each partition to be created must exist as a file.  When bootfix is run with the
+-i switch it checks the following list of files and sizes.  Each file will become
+a partition on the NAND device.  The partition name is derived from the file name.
+The partition size will be the greater of the file size and the specified size.
+
+Example:
+./bootfix -i "/temp/bootloader 0" "/temp/rootfs 0" "/temp/data 0"
+
+bootfix will create the MBR then the three partitions (bootloader, rootfs, data).
+
+
+
+
+ called NAND.DAT.

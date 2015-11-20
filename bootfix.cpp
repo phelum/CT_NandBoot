@@ -71,6 +71,7 @@
 #include <sys/termios.h>
 
 #include "bootfix.h"
+#include "nand_part.inc"
 
 
 char	GetYesNo	(char *msg)
@@ -370,10 +371,13 @@ int		install_fes_1_2	(libusb_device_handle *handle, uchar *buf)
 	read_log (buf + 0x200, 0x0200, (char*) "pt1_000138");
 
 	if ((buf [0x31] != buf [0x231]) && (buf [0x49] != buf [0x249])) {
-		if (buf [0x31] == (buf [0x49] * 4)) {
-			buf [0x231] = buf [0x31];
-			buf [0x249] = buf [0x49];
-		}
+//		if (buf [0x31] == (buf [0x49] * 4)) {
+//			buf [0x231] = buf [0x31];
+//			buf [0x249] = buf [0x49];
+//		}
+		buf [0x231] = buf [0x31];
+		buf [0x238] = buf [0x38];
+		buf [0x249] = buf [0x49];
 	}
 
 	if ((buf [0x31] == 0x10) && (buf [0x49] == 0x04)) {	// CB2 rather than CT ?
@@ -395,6 +399,8 @@ int		install_fes_1_2	(libusb_device_handle *handle, uchar *buf)
 		PerhapsQuit ();
 	}
 
+	NAND_256MB_count = buf [0x31];
+	printf ("%dMB NAND detected\n", NAND_256MB_count * 256);
 	RAM_256MB_count = buf [0x49];
 	printf ("%dMB RAM detected\n", RAM_256MB_count * 256);
 
@@ -527,7 +533,11 @@ int		install_fed_nand	(libusb_device_handle *handle, uchar *buf)
 
 	ShowURB (153);
 	aw_pad_read (handle, buf, 0x0400);					// DRAM config ?
-	memcpy (DRAM_config, buf + 32, 172);            	// will send back later
+//	memcpy (DRAM_config, buf + 32, 224);            	// will send back later
+	memcpy (&NandInfo, buf, sizeof (NandInfo));
+//	MaxNANDKey = *(int*) &(DRAM_config [0xB0]);
+	MaxNANDKey = NandInfo.SectorCount;
+	printf ("Max NAND key = %d\n", MaxNANDKey);
 #ifdef OLD_EXTRAS
 	hexdump (buf, 0, 256);
 #endif
@@ -641,7 +651,7 @@ int		install_boot1	(libusb_device_handle *handle, uchar *buf)
 	aw_fel2_write (handle, 0x40400000, buf, GetConfigRec (buf), AW_FEL2_DRAM);
 
 	ShowURB (113316);
-	aw_fel2_write			(handle, 0x40410000, DRAM_config, 0x00ac, AW_FEL2_DRAM);
+	aw_fel2_write (handle, 0x40410000, ((char*) &NandInfo) + 32, 0x00ac, AW_FEL2_DRAM);
 
 	ShowURB (113322);
 	aw_fel2_send_file (handle, 0x40360000, AW_FEL2_DRAM, FN_magic_de_start);
@@ -692,7 +702,7 @@ int		install_boot0	(libusb_device_handle *handle, uchar *buf)
 	aw_fel2_write (handle, 0x40400000, buf, GetConfigRec (buf), AW_FEL2_DRAM);
 
 	ShowURB (113547);
-	aw_fel2_write			(handle, 0x40410000, DRAM_config, 0x00ac, AW_FEL2_DRAM);
+	aw_fel2_write (handle, 0x40410000, ((char*) &NandInfo) + 32, 0x00ac, AW_FEL2_DRAM);
 
 	ShowURB (113559);
 	aw_fel2_send_file (handle, 0x40360000, AW_FEL2_DRAM, FN_magic_de_start);
@@ -757,7 +767,8 @@ int		restore_system	(libusb_device_handle *handle, uchar *buf)
 
 int		stage_1			(libusb_device_handle *handle, uchar *buf)
 {
-	ShowUSBSpeed			(handle);					// 12 Mbps here
+	if (2 != ShowUSBSpeed (handle))					// 12 Mbps here
+		printf ("Expected 12Mbps, continuing anyway.\n");
 
 	printf ("Start stage 1\n");
 
@@ -787,10 +798,17 @@ int		stage_2			(libusb_device_handle *handle, uchar *buf)
 
 	install_fed_nand (handle, buf);
 
-	send_partitions_and_MBR (handle, buf);				// not done yet !!!
+	if (readNAND == 1) {									// read test
+		GetAllNAND (handle, NAND_FID, 0, 0);
+	} else if (writeNAND == 1) {							// write test
+		PutAllNAND (handle, NAND_FID, 0, 0);
+	} else if (loadNAND == 1) {								// MBR and partitions
+		LoadNAND (handle, part_cnt, part_name, part_secs);
+	} else {
+		send_partitions_and_MBR (handle, buf);				// not done yet !!!
+	}
 
 	install_boot1 (handle, buf);
-
 	install_boot0 (handle, buf);
 
 	restore_system (handle, buf);
@@ -812,13 +830,46 @@ int		main			(int argc, char * argv [])
 	rc = libusb_init (NULL);
 	assert (rc == 0);
 
-	if (argc > 1) {
+	while (argc > 1) {
 		if (strcmp (argv [1], (char *) "-t") == 0) {
 			USBTests (buf);
 			goto bye;
 		}
-		if (strcmp (argv [1], (char *) "-x") == 0)
+		if (strcmp (argv [1], (char *) "-h") == 0) {
+			printf ("no flags = update boot0 and boot1.\n");
+			printf ("-r = read all NAND, save to NAND.DAT.\n");
+			printf ("-w = write NAND.DAT to device NAND.\n");
+			printf ("-t = USB tests.\n");
+			printf ("-i <file list> = create NAND MBR, write MBR and files to NAND,\n");
+			printf ("  each file is a partition to write, the file name is used as\n");
+			printf ("  the partition name in the MBR.\n");
+			printf ("  Each file entry consists of a name and size enclosed in quotes.\n");
+			printf ("  The size is the partition size in sectors (0 = use file size).\n");
+			printf ("  e.g. bootfix -i \"/data/boot 0\" \"/data/rootfs 0"\ \"/data/extra 0"\\n");
+			goto bye;
+		}
+		if (strcmp (argv [1], (char *) "-x") == 0) {
 			forceable = 1;
+		} else if (strcmp (argv [1], (char *) "-r") == 0) {
+			readNAND = 1;
+			if (argc > 2)
+				strcpy (NAND_FID, argv [2]);
+			break;
+		} else if (strcmp (argv [1], (char *) "-w") == 0) {
+			writeNAND = 1;
+			if (argc > 2)
+				strcpy (NAND_FID, argv [2]);
+			break;
+		} else if (strcmp (argv [1], (char *) "-i") == 0) {
+			loadNAND = 1;
+			part_cnt = argc - 2;
+			if (part_cnt > 16)
+				part_cnt = 16;
+			BOJLoadNANDCheck (part_cnt, &argv [2], part_secs);
+			break;
+		}
+		argc--;
+		argv++;
 	}
 
 	handle = open_usb ();								// stage 1

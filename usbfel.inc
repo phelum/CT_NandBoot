@@ -73,7 +73,8 @@ void usb_bulk_recv(libusb_device_handle *usb, int ep, void *cdata, int length)
 		rc = libusb_bulk_transfer(usb, ep, data, length, &recv, aw_timeout);
 		if (rc != 0) {
 			fprintf(stderr, "usb_bulk_recv error %d\n", rc);
-			exit(2);
+//			exit(2);
+			recv = 0;
 		}
 		length -= recv;
 		data += recv;
@@ -158,7 +159,8 @@ int  aw_read_fel_status (libusb_device_handle *usb)
 	aw_usb_read (usb, &buf, sizeof(buf));
 
 	if (memcmp (buf, lit, 8)) {
-		printf ("aw_read_fel_status error\n");
+		printf ("aw_read_fel_status error, got %02X %02X %02X %02X %02X %02X %02X %02X \n",
+			buf [0], buf [1], buf [2], buf [3], buf [4], buf [5], buf [6], buf [7]);
 	}
 
 	return (memcmp (buf, lit, 8));
@@ -286,45 +288,41 @@ static const int AW_FEL_2_0204  = 0x0204;
 static const int AW_FEL_2_0205  = 0x0205;
 
 
-void aw_pad_read (libusb_device_handle *usb, void *buf, size_t len)
+int  aw_pad_read (libusb_device_handle *usb, void *buf, size_t len)
 {
 	aw_usb_read (usb, buf, len);
-	aw_read_fel_status (usb);
 
-	return;
+	return aw_read_fel_status (usb);
 }
 
 
-void aw_pad_write (libusb_device_handle *usb, void *buf, size_t len)
+int  aw_pad_write (libusb_device_handle *usb, void *buf, size_t len)
 {
 	aw_usb_write (usb, buf, len);
-	aw_read_fel_status (usb);
 
-	return;
+	return aw_read_fel_status (usb);
 }
 
 
-void aw_fel2_read (libusb_device_handle *usb, uint32_t offset, void *buf, size_t len, uint32_t specs)
+int  aw_fel2_read (libusb_device_handle *usb, uint32_t offset, void *buf, size_t len, uint32_t specs)
 {
 	specs &= ~AW_FEL2_IO;
 	specs |=  AW_FEL2_RD;
 	aw_send_fel_request (usb, AW_FEL_2_RDWR, offset, len, specs);
 	aw_usb_read (usb, buf, len);
-	aw_read_fel_status (usb);
 
-	return;
+	return aw_read_fel_status (usb);
 }
 
 
-void aw_fel2_write (libusb_device_handle *usb, uint32_t offset, void *buf, size_t len, uint32_t specs)
+int  aw_fel2_write (libusb_device_handle *usb, uint32_t offset, void *buf, size_t len, uint32_t specs)
 {
 	specs &= ~AW_FEL2_IO;
 	specs |=  AW_FEL2_WR;
 	aw_send_fel_request (usb, AW_FEL_2_RDWR, offset, len, specs);
 	aw_usb_write (usb, buf, len);
-	aw_read_fel_status (usb);
 
-	return;
+	return aw_read_fel_status (usb);
 }
 
 
