@@ -290,6 +290,7 @@ int		install_fes_1_1	(libusb_device_handle *handle, uchar *buf)
   	aw_fel_write (handle, 0x7210, buf, 0x10);
 
 	ShowURB (77);
+
 #ifdef OLD_EXTRAS
 //			Load buffer as per URB 81 (0xae0 = 2784) FES_1-1 with nulls after.
 //			We do lots of sanity checks here (relic from testing).
@@ -397,12 +398,18 @@ int		install_fes_1_2	(libusb_device_handle *handle, uchar *buf)
 		perror ("Compare to pt1_000138 failed");
 		save_file ((char *) "Dump1_000138", buf, 0x200);
 		PerhapsQuit ();
+	} else {
+		if (forceable)
+			save_file ((char *) "Dump1_000138", buf, 0x200);
 	}
 
-	NAND_256MB_count = buf [0x31];
-	printf ("%dMB NAND detected\n", NAND_256MB_count * 256);
-	RAM_256MB_count = buf [0x49];
-	printf ("%dMB RAM detected\n", RAM_256MB_count * 256);
+	memcpy (&DramInfo, buf, sizeof (DramInfo));
+
+	printf ("%dMB RAM detected\n", DramInfo.dram_size);
+
+//	NAND_256MB_count = buf [0x31];							// this is WRONG !!!
+//	NAND_256MB_count = buf [0x38];							// this is WRONG !!!
+//	printf ("%dMB NAND detected\n", NAND_256MB_count * 256);
 
 	return 0;
 }
@@ -493,12 +500,22 @@ int		stage_2_prep	(libusb_device_handle *handle, uchar *buf)
 
 int		GetConfigRec		(uchar *buf)
 {
+	rDramInfo	*pInfo;
+
 	read_log (buf, 0x2760, (char*) "pt2_000054");
+	pInfo = (rDramInfo*) &(buf [20]);
+
+	*pInfo = DramInfo;
+	pInfo->dram_rank_num     = 0xFFFFFFFF;
+	pInfo->dram_chip_density = 0xFFFFFFFF;
+	pInfo->dram_io_width     = 0xFFFFFFFF;
+	pInfo->dram_bus_width    = 0xFFFFFFFF;
+	pInfo->dram_size         = 0xFFFFFFFF;
 
 //	if (CB2_mode)
 //		buf [0x218] = 0x04;
 
-	buf [0x218] = RAM_256MB_count;
+//	buf [0x218] = RAM_MB_count / 256;	// why did I do this ?
 
 	return 0x2760;
 }
@@ -532,17 +549,14 @@ int		install_fed_nand	(libusb_device_handle *handle, uchar *buf)
 	aw_fel2_0204 (handle, 0x0400);
 
 	ShowURB (153);
-	aw_pad_read (handle, buf, 0x0400);					// DRAM config ?
-//	memcpy (DRAM_config, buf + 32, 224);            	// will send back later
+	aw_pad_read (handle, buf, 0x0400);					// NAND config
 	memcpy (&NandInfo, buf, sizeof (NandInfo));
-//	MaxNANDKey = *(int*) &(DRAM_config [0xB0]);
-	MaxNANDKey = NandInfo.SectorCount;
-	printf ("Max NAND key = %d\n", MaxNANDKey);
+	printf ("Max NAND key = %d\n", NandInfo.SectorCount);
 #ifdef OLD_EXTRAS
 	hexdump (buf, 0, 256);
 #endif
 	if (forceable)
-		save_file ((char *) "Dump2_000153", buf, 256);
+		save_file ((char *) "Dump2_000153", buf, 0x0400);
 
 	return 0;
 }
@@ -845,7 +859,7 @@ int		main			(int argc, char * argv [])
 			printf ("  the partition name in the MBR.\n");
 			printf ("  Each file entry consists of a name and size enclosed in quotes.\n");
 			printf ("  The size is the partition size in sectors (0 = use file size).\n");
-			printf ("  e.g. bootfix -i \"/data/boot 0\" \"/data/rootfs 0"\ \"/data/extra 0"\\n");
+			printf ("  e.g. bootfix -i \"/data/boot 0\" \"/data/rootfs 0\" \"/data/extra 0\"\n");
 			goto bye;
 		}
 		if (strcmp (argv [1], (char *) "-x") == 0) {

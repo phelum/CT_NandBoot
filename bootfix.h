@@ -33,6 +33,34 @@ typedef struct tag_NandInfo {
 }__attribute__ ((packed)) rNandInfo;
 
 
+typedef struct tag_DramInfo {
+	uint				zeroes [6];
+	uint				unk_0;					// 0x007C4AC1
+	uint				unk_1;					// 0
+	uint				dram_baseaddr;			// 0x40000000
+	uint				dram_clk;				// 0x01B0
+	uint				dram_type;				// 0x03
+	uint				dram_rank_num;			// 0x01
+	uint				dram_chip_density;		// 0x1000
+	uint				dram_io_width;			// 0x0010
+	uint				dram_bus_width;			// 0x20
+	uint				dram_cas;				// 0x09
+	uint				dram_zq;				// 0x7F
+	uint				dram_odt_en;			// 0x00
+	uint				dram_size;				// 0x0400	MB
+	uint				dram_tpr0;				// 0x42D899B7
+	uint				dram_tpr1;				// 0xA090
+	uint				dram_tpr2;				// 0x022A00
+	uint				dram_tpr3;				// 0x00	
+	uint				dram_tpr4;				// 0x01
+	uint				dram_tpr5;				// 0x00
+	uint				dram_emr1;				// 0x04
+	uint				dram_emr2;				// 0x10	
+	uint				dram_emr3;				// 0x00
+	uint				spare [36];
+}__attribute__ ((packed)) rDramInfo;
+
+
 
 	bool				bShowURBs = true;
 	int					rc;
@@ -49,11 +77,8 @@ typedef struct tag_NandInfo {
 	int					errors = 0;					// forced past halt ?
 	int					CB2_mode = 0;				// specials for CB2 ?
 	int					version = 0;				// 0x1610 = flash mode
+	rDramInfo			DramInfo;
 	rNandInfo			NandInfo;
-//	uchar				DRAM_config [224];
-	int					RAM_256MB_count = 8;		// 8 = 2GB = CubieTruck
-	int					NAND_256MB_count = 32;		// 32 = 8GB = CubieTruck
-	uint				MaxNANDKey = 0x760000;		// 4GB CubieBoard2
 
 	char				*FN_DRAM_specs		= (char*) "pt1_000063";
 	char				*FN_fes_1_1			= (char*) "fes_1-1.fex";

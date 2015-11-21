@@ -142,8 +142,7 @@ int		GetAllNAND       	(libusb_device_handle *handle, char *fid,
 
 	aw_fel2_send_file (handle, 0x40360000, AW_FEL2_DRAM, FN_magic_cr_start);
 
-	printf ("256MB count = %d\n", NAND_256MB_count);
-	file_sectors = MaxNANDKey;
+	file_sectors = NandInfo.SectorCount;
 	printf ("Sectors to get = %d\n", file_sectors);
 
 	sector_key = sector;
@@ -401,9 +400,9 @@ int		LoadNAND 	      	(libusb_device_handle *handle,
 		
 	}
 
-	if (parts_end > MaxNANDKey)
+	if (parts_end > NandInfo.SectorCount)
 		printf ("Error, total sectors reqd (%d) > NAND sectors (%d).\n",
-				parts_end, MaxNANDKey);
+				parts_end, NandInfo.SectorCount);
 
 	if (0 > (mbr_fd = open (mbr_fid, O_RDWR | O_CREAT))) {
 		perror("Failed to open mbr file: ");

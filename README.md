@@ -71,7 +71,3 @@ Example:
 
 bootfix will create the MBR then the three partitions (bootloader, rootfs, data).
 
-
-
-
- called NAND.DAT.
