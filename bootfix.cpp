@@ -845,7 +845,7 @@ int		main			(int argc, char * argv [])
 			printf ("  the partition name in the MBR.\n");
 			printf ("  Each file entry consists of a name and size enclosed in quotes.\n");
 			printf ("  The size is the partition size in sectors (0 = use file size).\n");
-			printf ("  e.g. bootfix -i \"/data/boot 0\" \"/data/rootfs 0"\ \"/data/extra 0"\\n");
+			printf ("  e.g. bootfix -i \"/data/boot 0\" \"/data/rootfs 0\" \"/data/extra 0\"\n");
 			goto bye;
 		}
 		if (strcmp (argv [1], (char *) "-x") == 0) {
