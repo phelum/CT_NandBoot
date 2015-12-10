@@ -235,6 +235,24 @@ int	read_log (void *dest, int bytes, char *name)
 }
 
 
+int	IsA10				(int version)
+{
+	return (version == 0x1623);
+}
+
+
+int	IsA20				(int version)
+{
+	return (version == 0x1651);
+}
+
+
+int	IsH3				(int version)
+{
+	return (version == 0x1680);
+}
+
+
 int	stage_1_prep (libusb_device_handle *handle, uchar *buf)
 {
 	int  x;
@@ -242,8 +260,14 @@ int	stage_1_prep (libusb_device_handle *handle, uchar *buf)
     ShowURB (5);
 	version = aw_fel_get_version (handle);
 
-	if (version != 0x1651) {						// 0x1651 = Cubietruck
-		printf ("Expected ID 0x1651, got %04X\n", version);
+	if (IsA10 (version)) {							// 0x1623 = A10
+		printf ("Detected A10 (ID 0x%04X)\n", version);
+	} else if (IsA20 (version)) {					// 0x1651 = A20
+		printf ("Detected A20 (ID 0x%04X)\n", version);
+	} else if (IsH3 (version)) {					// 0x1680 = H3
+		printf ("Detected H3 (ID 0x%04X)\n", version);
+	} else {
+		printf ("Unknown processor ID 0x%04X\n", version);
 		PerhapsQuit ();
 	}
 
@@ -281,8 +305,64 @@ int	stage_1_prep (libusb_device_handle *handle, uchar *buf)
 
 int		install_fes_1_1	(libusb_device_handle *handle, uchar *buf)
 {
+	rDramInfo		*pDI;
+
 	ShowURB (63);
 	read_log (buf, 0x200, FN_DRAM_specs);				// DRAM access specs
+
+	pDI = (rDramInfo*) buf;
+	if (IsA20 (version)) {
+		pDI->dram_baseaddr   = 0x40000000;				// from CT script.fex
+		pDI->dram_clk        = 432;
+		pDI->dram_type       = 3;
+//		pDI->dram_rank_num   = 0;
+//		pDI->dram_chip_density = 0;
+//		pDI->dram_io_width   = 0;
+//		pDI->dram_bus_width  = 0;
+		pDI->dram_cas        = 9;
+		pDI->dram_zq         = 0x7f;
+		pDI->dram_odt_en     = 0;
+//		pDI->dram_size       = 0;
+		pDI->dram_tpr0       = 0x42d899b7;
+		pDI->dram_tpr1       = 0xa090;
+		pDI->dram_tpr2       = 0x22a00;
+		pDI->dram_tpr3       = 0x0;
+		pDI->dram_tpr4       = 0x1;
+		pDI->dram_tpr5       = 0x0;
+		pDI->dram_emr1       = 0x4;
+		pDI->dram_emr2       = 0x10;
+		pDI->dram_emr3       = 0x0;
+	}
+
+	if (IsH3 (version)) {
+		pDI->dram_baseaddr   = 0x40000000;				// from H3 script.fex
+//		pDI->dram_clk        = 672;
+		pDI->dram_clk        = 480;
+		pDI->dram_type       = 3;
+		pDI->dram_zq         = 0x3b3bfb;
+		pDI->dram_odt_en     = 0x1;
+//		pDI->dram_para1      = 0x10E40000;
+//		pDI->dram_para2      = 0x0000;
+//		pDI->dram_mr0        = 0x1840;
+		pDI->dram_emr1        = 0x40;
+		pDI->dram_emr2        = 0x18;
+		pDI->dram_emr3        = 0x2;
+		pDI->dram_tpr0       = 0x0048A192;
+		pDI->dram_tpr1       = 0x01C2418D;
+		pDI->dram_tpr2       = 0x00076051;
+		pDI->dram_tpr3       = 0;
+		pDI->dram_tpr4       = 0;
+		pDI->dram_tpr5       = 0;
+//		pDI->dram_tpr6       = 100;
+//		pDI->dram_tpr7       = 0;
+//		pDI->dram_tpr8       = 0;
+//		pDI->dram_tpr9       = 0;
+//		pDI->dram_tpr10      = 0;
+//		pDI->dram_tpr11      = 0x6aaa0000;
+//		pDI->dram_tpr12      = 0x7979;
+//		pDI->dram_tpr13      = 0x800800;
+	}
+
 	aw_fel_write (handle, 0x7010, buf, 0x200);
 
 	ShowURB (72);
@@ -314,7 +394,10 @@ int		install_fes_1_1	(libusb_device_handle *handle, uchar *buf)
 	}
 #endif
 
-	aw_fel_send_file (handle, 0x7220, FN_fes_1_1, 2784, 2784);
+	if (IsH3 (version))
+		aw_fel_send_file (handle, 0x7220, (char*) "H3_FES_1-0", 12128, 12128);
+	else
+		aw_fel_send_file (handle, 0x7220, FN_fes_1_1, 2784, 2784);
 
 #ifdef OLD_EXTRAS
 	aw_fel_read (handle, 0x7220, buf + 2784, 2784);		// sanity test
@@ -371,6 +454,7 @@ int		install_fes_1_2	(libusb_device_handle *handle, uchar *buf)
 	aw_fel_read (handle, 0x7010, buf, 0x200);			// expect as per URB 138
 	read_log (buf + 0x200, 0x0200, (char*) "pt1_000138");
 
+#if 0
 	if ((buf [0x31] != buf [0x231]) && (buf [0x49] != buf [0x249])) {
 //		if (buf [0x31] == (buf [0x49] * 4)) {
 //			buf [0x231] = buf [0x31];
@@ -402,6 +486,7 @@ int		install_fes_1_2	(libusb_device_handle *handle, uchar *buf)
 		if (forceable)
 			save_file ((char *) "Dump1_000138", buf, 0x200);
 	}
+#endif
 
 	memcpy (&DramInfo, buf, sizeof (DramInfo));
 
@@ -840,6 +925,9 @@ int		main			(int argc, char * argv [])
 {
 	int x;
 	uchar *buf = (uchar*) malloc (65536);
+//	uchar *buf = (uchar*) malloc (1048576);
+
+	assert (buf != 0);
 
 	rc = libusb_init (NULL);
 	assert (rc == 0);
@@ -847,6 +935,14 @@ int		main			(int argc, char * argv [])
 	while (argc > 1) {
 		if (strcmp (argv [1], (char *) "-t") == 0) {
 			USBTests (buf);
+			goto bye;
+		}
+		if (strcmp (argv [1], (char *) "-h") == 0) {
+			H3_Tests (buf);
+			goto bye;
+		}
+		if (strcmp (argv [1], (char *) "-l") == 0) {
+			Lime_Tests (buf);
 			goto bye;
 		}
 		if (strcmp (argv [1], (char *) "-h") == 0) {

@@ -53,10 +53,10 @@ The uEnv.txt file will probably require customising.
 
 <pre>
 "./bootfix -r" will save all NAND to a file called NAND.DAT.
-"./bootfix -r <fid>" will save all NAND to the specified file.
+"./bootfix -r &lt;file_id&gt;" will save all NAND to the specified file.
 
 "./bootfix -w" will load NAND from a file called NAND.DAT.
-"./bootfix -w <fid>" will load all NAND from the specified file.
+"./bootfix -w &lt;file_id&gt;" will load all NAND from the specified file.
 </pre>
 
 	Creating MBR and partitions.

@@ -61,6 +61,85 @@ typedef struct tag_DramInfo {
 }__attribute__ ((packed)) rDramInfo;
 
 
+typedef struct _boot_dram_para_t				// for H3, from /brandy/u-boot-2011.09/arch/arm/include/arm/archsub81w7/dram.h
+{
+	//normal configuration
+	unsigned int        dram_clk;
+	unsigned int        dram_type;		//dram_type			DDR2: 2				DDR3: 3				LPDDR2: 6	DDR3L: 31
+    unsigned int        dram_zq;
+    unsigned int		dram_odt_en;
+
+	//control configuration
+	unsigned int		dram_para1;
+    unsigned int		dram_para2;
+
+	//timing configuration
+	unsigned int		dram_mr0;
+    unsigned int		dram_mr1;
+    unsigned int		dram_mr2;
+    unsigned int		dram_mr3;
+    unsigned int		dram_tpr0;
+    unsigned int		dram_tpr1;
+    unsigned int		dram_tpr2;
+    unsigned int		dram_tpr3;
+    unsigned int		dram_tpr4;
+    unsigned int		dram_tpr5;
+   	unsigned int		dram_tpr6;
+
+    //reserved for future use
+    unsigned int		dram_tpr7;
+    unsigned int		dram_tpr8;
+    unsigned int		dram_tpr9;
+    unsigned int		dram_tpr10;
+    unsigned int		dram_tpr11;
+    unsigned int		dram_tpr12;
+    unsigned int		dram_tpr13;
+
+}__dram_para_t;
+
+
+#define DRAM_MDFS_TABLE_PARA0   (2)
+#define DRAM_MDFS_TABLE_PARA1   (10)
+
+typedef struct __DRAM_PARA			// from linux-3.4/drivers/devfreq/dramfreq/sunxi-dramfreq.h
+{
+    //normal configuration
+    unsigned int dram_clk;
+    unsigned int dram_type;    //dram_type  DDR2: 2  DDR3: 3 LPDDR2: 6 DDR3L: 31
+    unsigned int dram_zq;
+    unsigned int dram_odt_en;
+
+    //control configuration
+    unsigned int dram_para1;
+    unsigned int dram_para2;
+
+    //timing configuration
+    unsigned int dram_mr0;
+    unsigned int dram_mr1;
+    unsigned int dram_mr2;
+    unsigned int dram_mr3;
+    unsigned int dram_tpr0;
+    unsigned int dram_tpr1;
+    unsigned int dram_tpr2;
+    unsigned int dram_tpr3;
+    unsigned int dram_tpr4;
+    unsigned int dram_tpr5;
+    unsigned int dram_tpr6;
+
+    //reserved for future use
+    unsigned int dram_tpr7;
+    unsigned int dram_tpr8;
+    unsigned int dram_tpr9;
+    unsigned int dram_tpr10;
+    unsigned int dram_tpr11;
+    unsigned int dram_tpr12;
+    unsigned int dram_tpr13;
+
+    unsigned int high_freq;
+
+    unsigned int table[DRAM_MDFS_TABLE_PARA0][DRAM_MDFS_TABLE_PARA1];
+} __dram_para_t_old;
+
 
 	bool				bShowURBs = true;
 	int					rc;

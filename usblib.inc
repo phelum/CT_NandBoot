@@ -147,7 +147,6 @@ int		USBTests				(uchar *buf)
 		printf ("Cubieboard2 detected\n");
 	}
 
-
 	version = aw_fel_get_version (handle);					
 
 	SavePad (buf, (char *) "Dump0_000200");
@@ -255,5 +254,316 @@ int		USBTests				(uchar *buf)
 
 	return 0;
 }
+
+
+int		H3_Tests				(uchar *buf)
+{
+		int				x;
+
+	handle = open_usb ();
+
+	ShowUSBSpeed			(handle);					// 12 Mbps here
+	version = aw_fel_get_version (handle);					
+	version = aw_fel_get_version (handle);					
+	version = aw_fel_get_version (handle);					
+
+	aw_fel_read				(handle, 0x7e00, buf, 256);	// expect all 0xCC
+
+	version = aw_fel_get_version (handle);					
+
+	PutNulls (buf, 4);
+	aw_fel_write			(handle, 0x7e00, buf, 256);		
+	aw_fel_get_version		(handle);					
+
+	PutNulls (buf, 16);
+  	aw_fel_write			(handle, 0x7210, buf, 0x10);
+
+	ShowURB (62);
+	aw_fel_send_file		(handle, 0x2000, (char*) "H3_FES_1-0");
+	ShowURB (78);
+	aw_fel_execute			(handle, 0x2000);				
+
+	aw_fel_read (handle, 0x7210, buf, 136);				// expect 'DRAM', 0x01 then nulls
+	read_log (buf+256, 136, (char*) "H3_pt1_000078");
+	if (memcmp (buf, buf+256, 136)) {
+		printf ("pt1_000078 error\n");
+		hexdump (buf, 0, 136);
+	}
+
+		FILE	*tmp, *in;
+
+	tmp = fopen ((char*) "/tmp/uboot", "w+b");			// byte e0 is 00 in orig, 10 in ours
+	read_log (buf, 256, (char*) "H3_pt1_000087");
+	fwrite (buf, 1, 256, tmp);
+	in = fopen  ((char*) "H3_UBOOT", "rb");
+	fseek (in, 256, 0);
+	while (0 < (x = fread (buf, 1, 65536, in)))
+		fwrite (buf, 1, x, tmp);
+	fclose (in);
+	fclose (tmp);
+
+	ShowURB (84);
+	aw_fel_send_file		(handle, 0x4A000000, (char*) "/tmp/uboot");
+	aw_fel_execute			(handle, 0x4A000000);				
+
+	handle = close_usb		(handle);					// have to close here.
+
+// 		line 61532  154661ms
+
+	printf ("Re-opening...");
+  	fflush (stdout);
+	for (x = 0; !handle; x++) {
+		usleep (1000000);								// wait 1 sec
+		printf (".");
+	  	fflush (stdout);
+		handle = open_usb (x < 10);						// try to open
+	}
+	printf ("done\n");
+
+	AW_USB_FEL_BULK_EP_OUT=0x02;		// have to swap endpoints here
+	AW_USB_FEL_BULK_EP_IN=0x81;
+
+	ShowUSBSpeed		(handle);						// 480 Mbps now
+
+	version = aw_fel_get_version (handle);
+
+	version = aw_fel_get_version (handle);
+
+	ShowURB (24);
+ 	aw_fel2_read		(handle, 0x7e00, buf, 0x100, AW_FEL2_DRAM);
+
+	version = aw_fel_get_version (handle);
+
+	ShowURB (45);
+	aw_fel2_write		(handle, 0x7e00, buf, 0x100, AW_FEL2_DRAM);
+
+	ShowURB (50);
+	PutNulls (buf, 16);
+	buf [0] = 0x01;
+	aw_fex_send_buf		(handle, buf, 0x10,	0x00, 0x007F04, 1);
+
+	ShowURB (56);
+	aw_fex_send_file 	(handle, (char*) "H3_MBR", 0, 0x007F01, 1);	// 7f01 = MBR
+
+	ShowURB (62);
+	aw_fex_0209			(handle, 0x00, 0x00, 0x00, buf);		// query storage
+	hexdump (buf, 0, 4);								// expect 02 00 00 00
+
+	ShowURB (65);
+	aw_fex_020A			(handle);						// flash on
+	printf ("Flash on\n");
+
+	ShowURB (67);
+	aw_fex_send_file	(handle, (char*) "H3_BOOTLOADER", 0x008000, 0x00, 1);
+
+	ShowURB (445);
+	aw_fex_send_file	(handle, (char*) "H3_ENV",        0x010000, 0x00, 1);
+
+	ShowURB (454);
+	aw_fex_send_file	(handle, (char*) "H3_BOOT",       0x018000, 0x00, 1);
+
+	ShowURB (1006);
+	aw_fex_send_file	(handle, (char*) "H3_SYSTEM",     0x020000, 0x00, 2);
+
+#if 0
+//
+//		These download chunks are at the end of H3_SYSTEM but I can't see
+//		how the output disk keys are specified.
+//
+	ShowURB (16660);
+	read_log 			(buf, 0x2000, (char*) "H3_pt2_016661");
+	aw_fex_send_buf		(handle, buf, 0x2000,			  0x0AAEC8, 0x00, 0);
+
+	ShowURB (16663);
+	read_log 			(buf, 0x1000, (char*) "H3_pt2_016664");
+	aw_fex_send_buf		(handle, buf, 0x1000,			  0x0E0000, 0x00, 0);
+
+	ShowURB (16666);
+	read_log 			(buf, 0x1000, (char*) "H3_pt2_016667");
+	aw_fex_send_buf		(handle, buf, 0x1000,			  0x0E0008, 0x00, 0);
+
+	ShowURB (16669);
+	read_log 			(buf, 0x2000, (char*) "H3_pt2_016670");
+	aw_fex_send_buf		(handle, buf, 0x2000,			  0x0E0188, 0x00, 0);
+
+	ShowURB (16672);
+	read_log 			(buf, 0x2000, (char*) "H3_pt2_016673");
+	aw_fex_send_buf		(handle, buf, 0x2000,			  0x120000, 0x00, 0);
+
+	ShowURB (16675);
+	read_log 			(buf, 0x1000, (char*) "H3_pt2_016676");
+	aw_fex_send_buf		(handle, buf, 0x1000,			  0x160000, 0x00, 0);
+
+	ShowURB (16678);
+	read_log 			(buf, 0x1000, (char*) "H3_pt2_016679");
+	aw_fex_send_buf		(handle, buf, 0x1000,			  0x160008, 0x00, 0);
+
+	ShowURB (16681);
+	read_log 			(buf, 0x2000, (char*) "H3_pt2_016682");
+	aw_fex_send_buf		(handle, buf, 0x2000,			  0x160188, 0x00, 0);
+#endif
+
+	ShowURB (16684);
+	aw_fex_send_file	(handle, (char*) "H3_RECOVERY",   0x1A8000, 0x00, 1);
+
+	ShowURB (17278);
+	aw_fex_send_file	(handle, (char*) "H3_SYSRECOVERY",0x1B8000, 0x00, 0);
+
+	aw_fex_send_file	(handle, (char*) "H3_DISKFS",     0x4A8000, 0x00, 1);
+
+	ShowURB (32017);
+	aw_fex_020B			(handle);						// flash off
+	printf ("Flash off\n");
+
+	ShowURB (32019);
+	aw_fex_0230			(handle, 0x00, 0x00, 0x00, buf);		// query secure
+	hexdump (buf, 0, 4);								// expect 00 00 00 00
+
+	ShowURB (32022);
+	aw_fex_send_file	(handle, (char*) "H3_UBOOT",      0x000000, 0x007F02, 1);	// BOOT 1
+
+	ShowURB (32067);
+	aw_fex_0230			(handle, 0x00, 0x00, 0x00, buf);		// query secure
+	hexdump (buf, 0, 4);								// expect 00 00 00 00
+
+	ShowURB (32070);
+	aw_fex_0209			(handle, 0x00, 0x00, 0x00, buf);		// query storage
+	hexdump (buf, 0, 4);								// expect 02 00 00 00
+
+	ShowURB (32073);
+//	aw_fex_send_file	(handle, (char*) "H3_BOOT_0",     0x000000, 0x007F03, 1);	// BOOT 0
+	aw_fex_send_file	(handle, (char*) "H3_12BOOT_0",   0x000000, 0x007F03, 1);	// BOOT 0
+
+	ShowURB (32079);
+	aw_fex_020F			(handle, 0x08, 0, 0);
+
+	close_usb				(handle);
+
+	return 0;
+}
+
+
+int		Lime_Tests				(uchar *buf)
+{
+		int				x;
+
+	handle = open_usb ();
+
+	ShowUSBSpeed			(handle);					// 12 Mbps here
+	version = aw_fel_get_version (handle);					
+	version = aw_fel_get_version (handle);					
+	version = aw_fel_get_version (handle);					
+
+	aw_fel_read				(handle, 0x7e00, buf, 256);	// expect all 0xCC
+
+	version = aw_fel_get_version (handle);					
+
+	PutNulls (buf, 4);
+	aw_fel_write			(handle, 0x7e00, buf, 256);		
+	aw_fel_get_version		(handle);					
+
+	PutNulls (buf, 16);
+  	aw_fel_write			(handle, 0x7210, buf, 0x10);
+
+	install_fes_1_1 (handle, buf);
+
+	install_fes_1_2 (handle, buf);
+
+		FILE	*tmp, *in;
+
+	tmp = fopen ((char*) "/tmp/uboot", "w+b");			// byte e0 is 00 in orig, 10 in ours
+	read_log (buf, 256, (char*) "H3_pt1_000087");
+	fwrite (buf, 1, 256, tmp);
+	in = fopen  ((char*) "H3_UBOOT", "rb");
+	fseek (in, 256, 0);
+	while (0 < (x = fread (buf, 1, 65536, in)))
+		fwrite (buf, 1, x, tmp);
+	fclose (in);
+	fclose (tmp);
+
+	ShowURB (84);
+	aw_fel_send_file		(handle, 0x4A000000, (char*) "/tmp/uboot");
+	aw_fel_execute			(handle, 0x4A000000);				
+
+	handle = close_usb		(handle);					// have to close here.
+
+	printf ("Re-opening...");
+  	fflush (stdout);
+	for (x = 0; !handle; x++) {
+		usleep (1000000);								// wait 1 sec
+		printf (".");
+	  	fflush (stdout);
+		handle = open_usb (x < 10);						// try to open
+	}
+	printf ("done\n");
+
+	AW_USB_FEL_BULK_EP_OUT=0x02;		// have to swap endpoints here
+	AW_USB_FEL_BULK_EP_IN=0x81;
+
+	ShowUSBSpeed		(handle);						// 480 Mbps now
+
+	version = aw_fel_get_version (handle);
+
+	version = aw_fel_get_version (handle);
+
+	ShowURB (24);
+ 	aw_fel2_read		(handle, 0x7e00, buf, 0x100, AW_FEL2_DRAM);
+
+	version = aw_fel_get_version (handle);
+
+	ShowURB (45);
+	aw_fel2_write		(handle, 0x7e00, buf, 0x100, AW_FEL2_DRAM);
+
+	ShowURB (50);
+	PutNulls (buf, 16);
+	buf [0] = 0x01;
+	aw_fex_send_buf		(handle, buf, 0x10,	0x00, 0x007F04, 1);
+
+	ShowURB (56);
+	aw_fex_send_file 	(handle, (char*) "/mnt/sda3/Nand/lime/nand_mbr", 0, 0x007F01, 1);	// 7f01 = MBR
+
+	ShowURB (62);
+	aw_fex_0209			(handle, 0x00, 0x00, 0x00, buf);		// query storage
+	hexdump (buf, 0, 4);								// expect 02 00 00 00
+
+	ShowURB (65);
+	aw_fex_020A			(handle);						// flash on
+	printf ("Flash on\n");
+
+	ShowURB (67);
+	aw_fex_send_file	(handle, (char*) "/mnt/sda3/Nand/lime/bootloader", 0x000100, 0x00, 1);
+	aw_fex_send_file	(handle, (char*) "/mnt/sda3/Nand/lime/boot",       0x000900, 0x00, 1);
+	aw_fex_send_file	(handle, (char*) "/mnt/sda3/Nand/lime/CloudFS",    0x000B00, 0x00, 1);
+
+	ShowURB (32017);
+	aw_fex_020B			(handle);						// flash off
+	printf ("Flash off\n");
+
+	ShowURB (32019);
+	aw_fex_0230			(handle, 0x00, 0x00, 0x00, buf);		// query secure
+	hexdump (buf, 0, 4);								// expect 00 00 00 00
+
+	ShowURB (32022);
+	aw_fex_send_file	(handle, (char*) "boot1_nand.fex",      0x000000, 0x007F02, 1);	// BOOT 1
+
+	ShowURB (32067);
+	aw_fex_0230			(handle, 0x00, 0x00, 0x00, buf);		// query secure
+	hexdump (buf, 0, 4);								// expect 00 00 00 00
+
+	ShowURB (32070);
+	aw_fex_0209			(handle, 0x00, 0x00, 0x00, buf);		// query storage
+	hexdump (buf, 0, 4);								// expect 02 00 00 00
+
+	ShowURB (32073);
+	aw_fex_send_file	(handle, (char*) "boot0_nand.bin",     0x000000, 0x007F03, 1);	// BOOT 0
+
+	ShowURB (32079);
+	aw_fex_020F			(handle, 0x08, 0, 0);
+
+	close_usb				(handle);
+
+	return 0;
+}
+
 
 
