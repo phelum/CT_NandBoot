@@ -62,12 +62,15 @@ The uEnv.txt file will probably require customising.
 	Creating MBR and partitions.
 
 Each partition to be created must exist as a file.  When bootfix is run with the
--i switch it checks the following list of files and sizes.  Each file will become
-a partition on the NAND device.  The partition name is derived from the file name.
-The partition size will be the greater of the file size and the specified size.
+-i switch it checks the following list of files and details.  Each partition entry
+is enclosed in quotes and contains the file name, start key, and size (sectors) for
+the partition.  Each file will become a partition on the NAND device.  The partition
+name is derived from the file name.  The start key will be the greater of the specified
+key and the next available sector.  The partition size will be the greater of the
+file size and the specified size.
 
 Example:
-./bootfix -i "/temp/bootloader 0" "/temp/rootfs 0" "/temp/data 0"
+./bootfix -i "/temp/bootloader 2048 0" "/temp/rootfs 0 0" "/temp/data 0 0"
 
 bootfix will create the MBR then the three partitions (bootloader, rootfs, data).
 

@@ -15,7 +15,7 @@
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.	 See the
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
@@ -39,44 +39,76 @@
 
 #include "types.h"
 
-#define MBR_MAGIC "softw411"
-#define MBR_VERSION 0x200
-#define nand_part nand_part_a20
-#define checkmbrs checkmbrs_a20
+#define v3_MBR_MAGIC "softw311"
+#define v4_MBR_MAGIC "softw411"
+#define v3_MBR_VERSION 0x100
+#define v4_MBR_VERSION 0x200
+//#define nand_part nand_part_a20
+//#define checkmbrs checkmbrs_a20
 
-#define MAX_PART_COUNT		120	 									//max part count
-#define MBR_COPY_NUM        4    									//mbr backup count
+#define v3_MAX_PART_COUNT       15                                      //max part count
+#define v4_MAX_PART_COUNT       120                                     //max part count
+#define MBR_COPY_NUM        4                                       //mbr backup count
 
-#define MBR_START_ADDRESS	0x0										//mbr start address
-#define MBR_SIZE			1024*16									//mbr size
-#define MBR_RESERVED        (MBR_SIZE - 32 - (MAX_PART_COUNT * 128)) //mbr reserved space
+#define MBR_START_ADDRESS   0x0                                     //mbr start address
+#define v3_MBR_SIZE         1024                                    //mbr size
+#define v4_MBR_SIZE         1024*16                                 //mbr size
+#define v3_MBR_RESERVED        (v3_MBR_SIZE - 20 - (v3_MAX_PART_COUNT * 64))  //mbr reserved space
+#define v4_MBR_RESERVED        (v4_MBR_SIZE - 32 - (v4_MAX_PART_COUNT * 128)) //mbr reserved space
 
 #define DiskSize  (SECTOR_CNT_OF_SINGLE_PAGE * PAGE_CNT_OF_PHY_BLK * BLOCK_CNT_OF_DIE * \
             DIE_CNT_OF_CHIP * NandStorageInfo.ChipCnt  / 1024 * DATA_BLK_CNT_OF_ZONE)
 
 
 struct nand_disk{
-	unsigned long size;
-	unsigned long offset;
-	unsigned char type;
+    unsigned long size;
+    unsigned long offset;
+    unsigned char type;
 };
 
+
 /* part info */
-typedef struct nand_tag_PARTITION{
-        unsigned  int       addrhi;
-        unsigned  int       addrlo;
-        unsigned  int       lenhi;
-        unsigned  int       lenlo;
-        unsigned  char      classname[16];
-        unsigned  char      name[16];
-        unsigned  int       user_type;
-        unsigned  int       keydata;
-        unsigned  int       ro;
-        unsigned  char      res[68];
-}__attribute__ ((packed))PARTITION;
+
+typedef struct v3_nand_tag_PARTITION {              // 64 bytes
+    __u32                   addrhi;             //start address high 32 bit
+    __u32                   addrlo;             //start address low 32 bit
+    __u32                   lenhi;              //size high 32 bit
+    __u32                   lenlo;              //size low 32 bit
+    __u8                    classname[12];      //major device name
+    __u8                    name[12];               //minor device name
+    __u32                   user_type;
+    __u32                   ro;
+    __u8                    res[16];                //reserved
+} v3_PARTITION;
+
+
+typedef struct v4_nand_tag_PARTITION {              // 128 bytes
+    __u32                   addrhi;
+    __u32                   addrlo;
+    __u32                   lenhi;
+    __u32                   lenlo;
+    __u8                    classname [16];
+    __u8                    name [16];
+    __u32                   user_type;
+    __u32                   keydata;
+    __u32                   ro;
+    __u8                    res [68];
+} __attribute__ ((packed)) v4_PARTITION;
+
 
 /* mbr info */
-typedef struct nand_tag_MBR{
+typedef struct v3_nand_tag_MBR {
+    __u32                   crc32;                      // crc 1k - 4
+    __u32                   version;                    // 0x00000100
+    __u8                    magic[8];                   //"softw311"
+    __u8                    copy;                       // mbr backup count
+    __u8                    index;                      // current part no
+    __u16                   PartCount;                  // part counter
+    v3_PARTITION            array [v3_MAX_PART_COUNT];  // part info
+    __u8                    res [v3_MBR_RESERVED];      // reserved space
+} v3_MBR;
+
+typedef struct v4_nand_tag_MBR {
         unsigned  int       crc32;                      // crc 1k - 4
         unsigned  int       version;                    // 0x00000200
         unsigned  char      magic[8];                   //"softw411"
@@ -84,12 +116,12 @@ typedef struct nand_tag_MBR{
         unsigned  int       index;
         unsigned  int       PartCount;
         unsigned  int       stamp[1];
-        PARTITION        array[MAX_PART_COUNT];  //
-        unsigned  char      res[MBR_RESERVED];
-}__attribute__ ((packed)) MBR;
+        v4_PARTITION        array[v4_MAX_PART_COUNT];  //
+        unsigned  char      res[v4_MBR_RESERVED];
+}__attribute__ ((packed)) v4_MBR;
 
-int mbr2disks(struct nand_disk* disk_array);
+//int mbr2disks(struct nand_disk* disk_array);
+int IsA10               (int version);
 
 #endif    //__MBR_H__
-
 

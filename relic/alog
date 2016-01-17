@@ -1,0 +1,720 @@
+sunxi#beign to init dram
+DRAM DRIVE INFO: V0.8
+DRAM Type = 3 (2:DDR2,3:DDR3,6:LPDDR2,7:LPDDR3)
+DRAM CLK = 672 MHz
+DRAM zq value: 003b3bfb
+READ DQS LCDL = 001d1c1e
+DRAM SIZE =1024 M
+odt delay 
+init dram ok
+SUNXI_NORMAL_MODE   
+[      3.984]e mode
+
+U-Boot 2011.09-rc1 (Mar 13 2015 - 12:54:51) Allwinner Technology 
+
+[      3.991]version: 1.1.0
+normal mode
+[      3.999]pmbus:   ready
+not set main pmu id
+axp_probe error
+[      4.013]PMU: pll1 1200 Mhz,PLL6=600 Mhz
+AXI=400 Mhz,AHB=200 Mhz, APB1=100 Mhz 
+dram_para_set start
+dram_para_set end
+normal mode
+[      4.026]DRAM:  512 MiB
+relocation Offset is: 15af9000
+user_gpio config
+user_gpio ok
+gic: normal or no secure os mode
+workmode = 16
+NAND_UbootProbe start
+NB1 : enter phy init
+NandHwInit: Start Nand Hardware initializing .....
+uboot:physical version: 2 21 20141212 1122 
+[NAND] channel cnt is 1
+ndfc version: 1 
+ndfc dma mode: MBUS DMA
+Reset NDFC 0
+NFC Randomizer start. 
+NFC_ResetChip: 0x101, 0x100 0x10095
+NFC_ResetChip: 0xff, ch: 0
+[PHY_DBG] CH 0 Nand flash chip id is:0x8 0x8 0x8 0x8 0x8 0x8
+nand id of two channel is not the same, set to 1 channel mode
+[SCAN_DBG] Nand flash chip id is:0x8 0x8 0x8 0x8 0x8 0x8
+[SCAN_ERR] search nand physical architecture parameter failed!
+[ERR]NandHwInit: SCN_AnalyzeNandSystem() failed!
+NandHwInit: End Nand Hardware initializing ..... FAIL!
+NB1 : nand phy init fail
+NB1 : enter phy Exit
+nand release dma:0
+NAND_UbootProbe end: 0xffffffff
+try nand fail
+[      4.138][mmc]: mmc driver ver 2014-12-10 9:23:00
+[      4.143][mmc]: get sdc_phy_wipe fail.
+[      4.147][mmc]: get sdc0 sdc_erase fail.
+[      4.151][mmc]: get sdc_2xmode ok, val = 1
+[      4.155][mmc]: get sdc_ddrmode ok, val = 1
+[      4.159][mmc]: get sdc_f_max fail,use default  50000000Hz
+[      4.165][mmc]: get card_line ok, card_line = 8
+[      4.169][mmc]: get sdc_ex_dly_used fail,use default
+[      4.174][mmc]: SUNXI SD/MMC: 2
+[      4.188][mmc]: *Try SD card 2*
+[      4.191][mmc]: mmc 2 cmd 8 err 100
+[      4.197][mmc]: mmc send if cond failed
+[      4.201][mmc]: mmc 2 cmd 55 err 100
+[      4.206][mmc]: send app cmd failed
+[      4.209][mmc]: *Try MMC card 2*
+[      4.384][mmc]: ddr8 
+[      4.396][mmc]: CID 0x8801034e 0x43617264 0x20208f00 0x512232df
+[      4.401][mmc]: MMC ver 4.5
+[      4.404][mmc]: mmc clk 50000000
+[      4.407][mmc]: SD/MMC Card: 8bit, capacity: 7475MB
+[      4.412][mmc]: boot0 capacity: 4000KB,boot1 capacity: 4000KB
+[      4.418][mmc]: ***SD/MMC 2 init OK!!!***
+[      4.423][mmc]: erase_grp_size:0x400WrBlk * 0x200 = 0x80000 Byte
+[      4.429][mmc]: secure_feature 0x15
+[      4.432][mmc]: secure_removal_type  0x0
+read flash error
+In:    serial
+Out:   serial
+Err:   serial
+--------fastboot partitions--------
+mbr not exist
+[      4.446]Hit any key to stop autoboot:  0 
+work mode=0x10
+run usb efex
+buf queue page size = 65536
+delay time 2500
+usb init ok
+set address 0x1
+SUNXI_EFEX_ERASE_TAG
+erase_flag = 0x1
+FEX_CMD_fes_verify_status
+FEX_CMD_fes_verify last err=0
+the 0 mbr table is ok
+the 1 mbr table is ok
+the 2 mbr table is ok
+the 3 mbr table is ok
+*************MBR DUMP***************
+total mbr part 14
+
+part[0] name      :bootloader
+part[0] classname :DISK
+part[0] addrlo    :0x8000
+part[0] lenlo     :0x8000
+part[0] user_type :32768
+part[0] keydata   :0
+part[0] ro        :0
+
+part[1] name      :env
+part[1] classname :DISK
+part[1] addrlo    :0x10000
+part[1] lenlo     :0x8000
+part[1] user_type :32768
+part[1] keydata   :0
+part[1] ro        :0
+
+part[2] name      :boot
+part[2] classname :DISK
+part[2] addrlo    :0x18000
+part[2] lenlo     :0x8000
+part[2] user_type :32768
+part[2] keydata   :0
+part[2] ro        :0
+
+part[3] name      :system
+part[3] classname :DISK
+part[3] addrlo    :0x20000
+part[3] lenlo     :0x180000
+part[3] user_type :32768
+part[3] keydata   :0
+part[3] ro        :0
+
+part[4] name      :misc
+part[4] classname :DISK
+part[4] addrlo    :0x1a0000
+part[4] lenlo     :0x8000
+part[4] user_type :32768
+part[4] keydata   :0
+part[4] ro        :0
+
+part[5] name      :recovery
+part[5] classname :DISK
+part[5] addrlo    :0x1a8000
+part[5] lenlo     :0x10000
+part[5] user_type :32768
+part[5] keydata   :0
+part[5] ro        :0
+
+part[6] name      :sysrecovery
+part[6] classname :DISK
+part[6] addrlo    :0x1b8000
+part[6] lenlo     :0x180000
+part[6] user_type :32768
+part[6] keydata   :0
+part[6] ro        :0
+
+part[7] name      :private
+part[7] classname :DISK
+part[7] addrlo    :0x338000
+part[7] lenlo     :0x8000
+part[7] user_type :32768
+part[7] keydata   :1
+part[7] ro        :0
+
+part[8] name      :Reserve0
+part[8] classname :DISK
+part[8] addrlo    :0x340000
+part[8] lenlo     :0x8000
+part[8] user_type :32768
+part[8] keydata   :1
+part[8] ro        :0
+
+part[9] name      :klog
+part[9] classname :DISK
+part[9] addrlo    :0x348000
+part[9] lenlo     :0x8000
+part[9] user_type :32768
+part[9] keydata   :0
+part[9] ro        :0
+
+part[10] name      :Reserve1
+part[10] classname :DISK
+part[10] addrlo    :0x350000
+part[10] lenlo     :0x10000
+part[10] user_type :49408
+part[10] keydata   :0
+part[10] ro        :0
+
+part[11] name      :Reserve2
+part[11] classname :DISK
+part[11] addrlo    :0x360000
+part[11] lenlo     :0x8000
+part[11] user_type :49408
+part[11] keydata   :0
+part[11] ro        :0
+
+part[12] name      :cache
+part[12] classname :DISK
+part[12] addrlo    :0x368000
+part[12] lenlo     :0x140000
+part[12] user_type :49408
+part[12] keydata   :0
+part[12] ro        :0
+
+part[13] name      :UDISK
+part[13] classname :DISK
+part[13] addrlo    :0x4a8000
+part[13] lenlo     :0x0
+part[13] user_type :49664
+part[13] keydata   :0
+part[13] ro        :0
+
+total part: 15
+mbr 0, 8000, 8000
+bootloader 1, 8000, 8000
+env 2, 8000, 8000
+boot 3, 8000, 8000
+system 4, 180000, 8000
+misc 5, 8000, 8000
+recovery 6, 10000, 8000
+sysrecovery 7, 180000, 8000
+private 8, 8000, 8000
+Reserve0 9, 8000, 8000
+klog 10, 8000, 8000
+Reserve1 11, 10000, c100
+Reserve2 12, 8000, c100
+cache 13, 140000, c100
+UDISK 14, 0, c200
+do need erase flash
+private part exist
+the 0 mbr table is ok
+the 1 mbr table is ok
+the 2 mbr table is ok
+the 3 mbr table is ok
+*************MBR DUMP***************
+total mbr part 14
+
+part[0] name      :bootloader
+part[0] classname :DISK
+part[0] addrlo    :0x8000
+part[0] lenlo     :0x8000
+part[0] user_type :32768
+part[0] keydata   :0
+part[0] ro        :0
+
+part[1] name      :env
+part[1] classname :DISK
+part[1] addrlo    :0x10000
+part[1] lenlo     :0x8000
+part[1] user_type :32768
+part[1] keydata   :0
+part[1] ro        :0
+
+part[2] name      :boot
+part[2] classname :DISK
+part[2] addrlo    :0x18000
+part[2] lenlo     :0x8000
+part[2] user_type :32768
+part[2] keydata   :0
+part[2] ro        :0
+
+part[3] name      :system
+part[3] classname :DISK
+part[3] addrlo    :0x20000
+part[3] lenlo     :0x180000
+part[3] user_type :32768
+part[3] keydata   :0
+part[3] ro        :0
+
+part[4] name      :misc
+part[4] classname :DISK
+part[4] addrlo    :0x1a0000
+part[4] lenlo     :0x8000
+part[4] user_type :32768
+part[4] keydata   :0
+part[4] ro        :0
+
+part[5] name      :recovery
+part[5] classname :DISK
+part[5] addrlo    :0x1a8000
+part[5] lenlo     :0x10000
+part[5] user_type :32768
+part[5] keydata   :0
+part[5] ro        :0
+
+part[6] name      :sysrecovery
+part[6] classname :DISK
+part[6] addrlo    :0x1b8000
+part[6] lenlo     :0x180000
+part[6] user_type :32768
+part[6] keydata   :0
+part[6] ro        :0
+
+part[7] name      :private
+part[7] classname :DISK
+part[7] addrlo    :0x338000
+part[7] lenlo     :0x8000
+part[7] user_type :32768
+part[7] keydata   :1
+part[7] ro        :0
+
+part[8] name      :Reserve0
+part[8] classname :DISK
+part[8] addrlo    :0x340000
+part[8] lenlo     :0x8000
+part[8] user_type :32768
+part[8] keydata   :1
+part[8] ro        :0
+
+part[9] name      :klog
+part[9] classname :DISK
+part[9] addrlo    :0x348000
+part[9] lenlo     :0x8000
+part[9] user_type :32768
+part[9] keydata   :0
+part[9] ro        :0
+
+part[10] name      :Reserve1
+part[10] classname :DISK
+part[10] addrlo    :0x350000
+part[10] lenlo     :0x10000
+part[10] user_type :49408
+part[10] keydata   :0
+part[10] ro        :0
+
+part[11] name      :Reserve2
+part[11] classname :DISK
+part[11] addrlo    :0x360000
+part[11] lenlo     :0x8000
+part[11] user_type :49408
+part[11] keydata   :0
+part[11] ro        :0
+
+part[12] name      :cache
+part[12] classname :DISK
+part[12] addrlo    :0x368000
+part[12] lenlo     :0x140000
+part[12] user_type :49408
+part[12] keydata   :0
+part[12] ro        :0
+
+part[13] name      :UDISK
+part[13] classname :DISK
+part[13] addrlo    :0x4a8000
+part[13] lenlo     :0x0
+part[13] user_type :49664
+part[13] keydata   :0
+part[13] ro        :0
+
+begin to store data
+part name bootloader
+keydata = 0x0
+part name env
+keydata = 0x0
+part name boot
+keydata = 0x0
+part name system
+keydata = 0x0
+part name misc
+keydata = 0x0
+part name recovery
+keydata = 0x0
+part name sysrecovery
+keydata = 0x0
+part name private
+keydata = 0x1
+find keypart private
+keypart read start: 0x338000, sectors 0x8000
+keypart part private read end: 0x338000, sectors 0x8000
+part name Reserve0
+keydata = 0x1
+part name klog
+keydata = 0x0
+part name Reserve1
+keydata = 0x0
+part name Reserve2
+keydata = 0x0
+part name cache
+keydata = 0x0
+part name UDISK
+keydata = 0x0
+need_erase_flag = 1
+begin to erase
+erase boot0, size:32k, write 0x00
+erase env part
+[      8.728][mmc]: erase from: 106496, to: 139263, cnt: 32768, erase_group: 1024
+[      8.744][mmc]: mmc_send_cmd: cmd 38 wait rsp busy 0xae0 us 
+erase boot part
+[      8.751][mmc]: erase from: 139264, to: 172031, cnt: 32768, erase_group: 1024
+[      8.771][mmc]: mmc_send_cmd: cmd 38 wait rsp busy 0x11f0 us 
+erase system part
+[      8.778][mmc]: erase from: 172032, to: 1744895, cnt: 1572864, erase_group: 1024
+[      8.999][mmc]: mmc_send_cmd: cmd 38 wait rsp busy 0x132f6 us 
+erase misc part
+[      9.007][mmc]: erase from: 1744896, to: 1777663, cnt: 32768, erase_group: 1024
+[      9.017][mmc]: mmc_send_cmd: cmd 38 wait rsp busy 0x34d us 
+erase recovery part
+[      9.024][mmc]: erase from: 1777664, to: 1843199, cnt: 65536, erase_group: 1024
+[      9.050][mmc]: mmc_send_cmd: cmd 38 wait rsp busy 0x189c us 
+erase sysrecovery part
+[      9.057][mmc]: erase from: 1843200, to: 3416063, cnt: 1572864, erase_group: 1024
+[      9.096][mmc]: mmc_send_cmd: cmd 38 wait rsp busy 0x2c66 us 
+erase private part
+[      9.104][mmc]: erase from: 3416064, to: 3448831, cnt: 32768, erase_group: 1024
+[      9.130][mmc]: mmc_send_cmd: cmd 38 wait rsp busy 0x1af7 us 
+erase Reserve0 part
+[      9.138][mmc]: erase from: 3448832, to: 3481599, cnt: 32768, erase_group: 1024
+[      9.148][mmc]: mmc_send_cmd: cmd 38 wait rsp busy 0x34d us 
+erase klog part
+[      9.155][mmc]: erase from: 3481600, to: 3514367, cnt: 32768, erase_group: 1024
+[      9.166][mmc]: mmc_send_cmd: cmd 38 wait rsp busy 0x3b8 us 
+erase Reserve1 part
+[      9.173][mmc]: erase from: 3514368, to: 3579903, cnt: 65536, erase_group: 1024
+[      9.184][mmc]: mmc_send_cmd: cmd 38 wait rsp busy 0x41b us 
+erase Reserve2 part
+[      9.192][mmc]: erase from: 3579904, to: 3612671, cnt: 32768, erase_group: 1024
+[      9.202][mmc]: mmc_send_cmd: cmd 38 wait rsp busy 0x34e us 
+erase cache part
+[      9.209][mmc]: erase from: 3612672, to: 4923391, cnt: 1310720, erase_group: 1024
+[      9.241][mmc]: mmc_send_cmd: cmd 38 wait rsp busy 0x21fc us 
+erase UDISK part
+sunxi_sprite_mmc_phyerase: @nr is 0, erase from @from to end
+[      9.254][mmc]: erase from: 4923392, to: 15307775, cnt: 10384384, erase_group: 1024
+[      9.412][mmc]: mmc_send_cmd: cmd 38 wait rsp busy 0xd860 us 
+[      9.418][mmc]: mmc_mmc_erase: some sectors in emmc are ignored!
+[      9.424][mmc]: --0: from15307776  nr1023 
+write zeros-0: from 0xe99400 to 0xe997fe
+[      9.431][mmc]: boot0 start address 15307776
+card erase all
+finish erase
+rewrite
+keypart write start: 0x338000, sectors 0x8000
+keypart write end: 0x338000, sectors 0x8000
+flash exit
+SUNXI_EFEX_MBR_TAG
+mbr size = 0x10000
+begin to write standard mbr
+[      9.865][mmc]: boot0 start address 1
+[      9.869][mmc]: boot0 start address 2
+[      9.874][mmc]: boot0 start address 3
+[      9.879][mmc]: boot0 start address 4
+[      9.883][mmc]: boot0 start address 5
+[      9.888][mmc]: boot0 start address 6
+[      9.893][mmc]: boot0 start address 7
+[      9.898][mmc]: boot0 start address 8
+[      9.902][mmc]: boot0 start address 9
+[      9.907][mmc]: boot0 start address 10
+[      9.912][mmc]: boot0 start address 11
+[      9.916][mmc]: boot0 start address 12
+[      9.921][mmc]: boot0 start address 0
+successed to write standard mbr
+FEX_CMD_fes_verify_status
+FEX_CMD_fes_verify last err=0
+FEX_CMD_fes_verify_value, start 0x8000, size high 0x0:low 0x7c1400
+FEX_CMD_fes_verify_value 0xf76f5c14
+FEX_CMD_fes_verify_value, start 0x10000, size high 0x0:low 0x20000
+FEX_CMD_fes_verify_value 0x1474f9cc
+FEX_CMD_fes_verify_value, start 0x18000, size high 0x0:low 0xb62000
+FEX_CMD_fes_verify_value 0xb23b1dc0
+FEX_CMD_fes_verify_value, start 0x1a8000, size high 0x0:low 0xc45000
+FEX_CMD_fes_verify_value 0x23c7039a
+securemode=0
+SUNXI_EFEX_BOOT1_TAG
+boot1 size = 0xdc000
+uboot size = 0xdc000
+storage type = 2
+mmc down uboot
+[    120.452][mmc]: boot0 start address 32800
+FEX_CMD_fes_verify_status
+FEX_CMD_fes_verify last err=0
+securemode=0
+SUNXI_EFEX_BOOT0_TAG
+boot0 size = 0x8000
+dram para[0] = 2a0
+dram para[1] = 3
+dram para[2] = 3b3bfb
+dram para[3] = 1
+dram para[4] = 10f40400
+dram para[5] = 0
+dram para[6] = 1c70
+dram para[7] = 40
+dram para[8] = 18
+dram para[9] = 0
+dram para[10] = 48a192
+dram para[11] = 1c2418d
+dram para[12] = 76051
+dram para[13] = 0
+dram para[14] = 0
+dram para[15] = 0
+dram para[16] = 64
+dram para[17] = 0
+dram para[18] = 0
+dram para[19] = 0
+dram para[20] = 0
+dram para[21] = 6aaa0000
+dram para[22] = 7979
+dram para[23] = 1800801
+dram para[24] = 0
+dram para[25] = 0
+dram para[26] = 0
+dram para[27] = 0
+dram para[28] = 0
+dram para[29] = 0
+dram para[30] = 0
+dram para[31] = 0
+storage type = 2
+FEX_CMD_fes_verify_status
+FEX_CMD_fes_verify last err=0
+sunxi_efex_next_action=2
+exit usb
+next work 2
+SUNXI_UPDATE_NEXT_ACTION_REBOOT
+set next mode 14
+drv_disp_exit
+[    120.602][mmc]: mmc exit start
+[    120.621][mmc]: mmc 2 cmd 8 err 100
+[    120.626][mmc]: mmc send if cond failed
+[    120.630][mmc]: mmc 2 cmd 55 err 100
+[    120.635][mmc]: send app cmd failed
+[    120.647][mmc]: get sdc_phy_wipe fail.
+[    120.651][mmc]: get sdc0 sdc_erase fail.
+[    120.655][mmc]: get sdc_2xmode ok, val = 1
+[    120.659][mmc]: get sdc_ddrmode ok, val = 1
+[    120.663][mmc]: get sdc_f_max fail,use default  50000000Hz
+[    120.668][mmc]: get card_line ok, card_line = 8
+[    120.673][mmc]: get sdc_ex_dly_used fail,use default
+[    120.678][mmc]: mmc 2 exit ok
+HELLO! BOOT0 is starting!
+boot0 version : 4.0.0
+fel_flag = 0x00000000
+rtc[0] value = 0x00000000
+rtc[1] value = 0x00000000
+rtc[2] value = 0x00000000
+rtc[3] value = 0x00000000
+rtc[4] value = 0x00000000
+rtc[5] value = 0x00000000
+rtc[6] value = 0x00000000
+rtc[7] value = 0x00000000
+DRAM DRIVE INFO: V0.8
+DRAM Type = 3 (2:DDR2,3:DDR3,6:LPDDR2,7:LPDDR3)
+DRAM CLK = 672 MHz
+DRAM zq value: 003b3bfb
+READ DQS LCDL = 001d1c1e
+DRAM SIZE =1024 M
+odt delay 
+dram size =1024
+card boot number = 2
+card no is 2
+sdcard 2 line count 8
+[mmc]: mmc driver ver 2014-12-10 21:20:39
+[mmc]: ***Try SD card 2***
+[mmc]: mmc 2 cmd 8 err 00000100
+[mmc]: mmc 2 cmd 8 err 00000100
+[mmc]: mmc 2 send if cond failed
+[mmc]: mmc 2 cmd 55 err 00000100
+[mmc]: mmc 2 cmd 55 err 00000100
+[mmc]: mmc 2 send app cmd failed
+[mmc]: ***Try MMC card 2***
+[mmc]: 8bit ddr!!! 
+[mmc]: MMC ver 4.5
+[mmc]: SD/MMC Card: 8bit, capacity: 7475MB
+[mmc]: vendor: Man 00880103 Snr 208f0051
+[mmc]: product: NCard
+[mmc]: revision: 2.0
+[mmc]: ***SD/MMC 2 init OK!!!***
+sdcard 2 init ok
+The size of uboot is 000dc000.
+sum=f4220f4d
+src_sum=f4220f4d
+set_mmc_para,sdly 50M 0
+set_mmc_para,sdly 25M 0
+Succeed in loading uboot from sdmmc flash.
+Ready to disable icache.
+Jump to secend Boot.
+SUNXI_NORMAL_MODE   
+[      0.257]e mode
+
+U-Boot 2011.09-rc1 (Mar 13 2015 - 12:54:51) Allwinner Technology 
+
+[      0.264]version: 1.1.0
+normal mode
+[      0.272]pmbus:   ready
+not set main pmu id
+axp_probe error
+[      0.287]PMU: pll1 1200 Mhz,PLL6=600 Mhz
+AXI=400 Mhz,AHB=200 Mhz, APB1=100 Mhz 
+sid read already 
+fel key new mode
+run key detect
+no key found
+no key input
+dram_para_set start
+dram_para_set end
+normal mode
+[      0.317]DRAM:  1 GiB
+relocation Offset is: 35af9000
+[box standby] read rtc = 0x0
+[box_start_os] mag be start_type no use
+user_gpio config
+user_gpio ok
+gic: normal or no secure os mode
+workmode = 0
+MMC:     2
+[      0.392][mmc]: mmc driver ver 2014-12-10 9:23:00
+[      0.397][mmc]: get sdc_phy_wipe fail.
+[      0.401][mmc]: get sdc0 sdc_erase fail.
+[      0.405][mmc]: get sdc_2xmode ok, val = 1
+[      0.409][mmc]: get sdc_ddrmode ok, val = 1
+[      0.413][mmc]: get sdc_f_max fail,use default  50000000Hz
+[      0.419][mmc]: get card_line ok, card_line = 8
+[      0.423][mmc]: get sdc_ex_dly_used fail,use default
+[      0.428][mmc]: SUNXI SD/MMC: 2
+[      0.442][mmc]: *Try SD card 2*
+[      0.445][mmc]: mmc 2 cmd 8 err 100
+[      0.451][mmc]: mmc send if cond failed
+[      0.455][mmc]: mmc 2 cmd 55 err 100
+[      0.460][mmc]: send app cmd failed
+[      0.463][mmc]: *Try MMC card 2*
+[      0.505][mmc]: ddr8 
+[      0.517][mmc]: CID 0x8801034e 0x43617264 0x20208f00 0x512232df
+[      0.522][mmc]: MMC ver 4.5
+[      0.525][mmc]: mmc clk 50000000
+[      0.528][mmc]: SD/MMC Card: 8bit, capacity: 7475MB
+[      0.533][mmc]: boot0 capacity: 4000KB,boot1 capacity: 4000KB
+[      0.539][mmc]: ***SD/MMC 2 init OK!!!***
+[      0.544][mmc]: erase_grp_size:0x400WrBlk * 0x200 = 0x80000 Byte
+[      0.550][mmc]: secure_feature 0x15
+[      0.553][mmc]: secure_removal_type  0x0
+[      0.557]sunxi flash init ok
+script config pll_de to 864 Mhz
+Not Found clk pll_video1 in script 
+script config pll_video to 297 Mhz
+[boot]disp_init_tv
+[DISP_TV] disp_init_tv enter g_tv_used
+screen 0 do not support TV TYPE!
+[BOOOT_DISP_TV] disp tv device_registered
+unable to find regulator vcc-hdmi-18 from [pmu1_regu] or [pmu2_regu] 
+enable power vcc-hdmi-18, ret=-1
+DRV_DISP_Init end
+boot_disp.auto_hpd=1
+auto hpd check has 50 times!
+error: open disp_rsl.fex, maybe it is not exist
+attched ok, mgr1<-->device1, type=2, mode=11----
+ready to set mode
+disp_tv_enable
+[      1.395]finally, output_type=0x2, output_mode=0xb, screen_id=0x1, disp_para=0x20b0000
+In:    serial
+Out:   serial
+Err:   serial
+--------fastboot partitions--------
+-total partitions:14-
+-name-        -start-       -size-      
+bootloader  : 1000000       1000000     
+env         : 2000000       1000000     
+boot        : 3000000       1000000     
+system      : 4000000       30000000    
+misc        : 34000000      1000000     
+recovery    : 35000000      2000000     
+sysrecovery : 37000000      30000000    
+private     : 67000000      1000000     
+Reserve0    : 68000000      1000000     
+klog        : 69000000      1000000     
+Reserve1    : 6a000000      2000000     
+Reserve2    : 6c000000      1000000     
+cache       : 6d000000      28000000    
+UDISK       : 95000000      0           
+-----------------------------------
+base bootcmd=run setargs_nand boot_normal
+bootcmd set setargs_mmc
+key 0
+cant find rcvy value
+cant find fstbt value
+misc partition found
+to be run cmd=run setargs_mmc boot_normal
+the secure storage map is empty
+no item name mac in the map
+sunxi storage read fail
+no item name wifi_mac in the map
+sunxi storage read fail
+no item name bt_mac in the map
+sunxi storage read fail
+no item name specialstr in the map
+sunxi storage read fail
+no item name serialno in the map
+sunxi storage read fail
+the user data'magic is bad
+WORK_MODE_BOOT
+adver not need show
+sunxi_bmp_logo_display
+f_read btr over hd12896
+read byte = 3686456
+[      1.625]screen_id =1, screen_width =720, screen_height =576
+[      1.631]frame buffer address 46400000
+[      1.635]Hit any key to stop autoboot:  0 
+read boot or recovery all
+[      1.895]sunxi flash read :offset 3000000, 12981523 bytes OK
+[      1.904]ready to boot
+board_display_setenv:  disp_para=20b0000
+[      1.910][mmc]: mmc exit start
+[      1.930][mmc]: mmc 2 cmd 8 err 100
+[      1.935][mmc]: mmc send if cond failed
+[      1.939][mmc]: mmc 2 cmd 55 err 100
+[      1.944][mmc]: send app cmd failed
+[      1.956][mmc]: get sdc_phy_wipe fail.
+[      1.960][mmc]: get sdc0 sdc_erase fail.
+[      1.964][mmc]: get sdc_2xmode ok, val = 1
+[      1.968][mmc]: get sdc_ddrmode ok, val = 1
+[      1.972][mmc]: get sdc_f_max fail,use default  50000000Hz
+[      1.977][mmc]: get card_line ok, card_line = 8
+[      1.982][mmc]: get sdc_ex_dly_used fail,use default
+[      1.987][mmc]: mmc 2 exit ok
+[      1.990]
+Starting kernel ...
+
+[sun8i_fixup]: From boot, get meminfo:
+        Start:  0x40000000
+        Size:   1024MB
+ion_carveout reserve: 160m@0 256m@0 130m@1 200m@1
+ion_reserve_common: ion reserve: [0x70000000, 0x80000000]!
