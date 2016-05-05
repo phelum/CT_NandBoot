@@ -421,7 +421,8 @@ int     BOJLoadNANDCheck    (int part_cnt, char ** part_list, uint part_start []
 
 
 int     LoadNAND            (libusb_device_handle *handle,
-                            int part_cnt, char part_name [16] [256], uint part_start [], uint part_secs [])
+                            int part_cnt, char part_name [16] [256],
+                            uint part_start [], uint part_size [])
 {
         int     x;
         FILE    *fin;
@@ -433,10 +434,17 @@ int     LoadNAND            (libusb_device_handle *handle,
 //      Probably "align" means align to NAND block boundaries.
 //      4096 aligns to max 2MB boundaries - but doesn't stop warnings in boot1.
 //      Currently using 256 so all start addrs (hex) end in 0x00.
+//      8192 should cater for 4MiB blocks - user should adjust load script if reqd.
 
-        uint    parts_incr = 256; // 4096; // 256; // 32768; // 256; // 128;
+//      2016-05-05: Partitions must be super-block aligned.  This is page size in bytes
+//      times page count per block times plane count of die.  Since we work in sectors
+//      here we use page size in sectors.  We are assuming a maximum page size of 16
+//      sectors, a block size of 256 pages, and 2 planes.  This gives us 16*256*2 = 8192.
+
+        uint    parts_incr = 8192; // 4096; // 256; // 32768; // 256; // 128;
         uint    parts_base = parts_incr;
         uint    parts_end  = parts_base;
+        uint    part_secs  [16];
         uint    part_type  [16];
         char    names      [16] [MAX_NAME];
         char    *in, *in1, *out, *fid;
@@ -444,14 +452,30 @@ int     LoadNAND            (libusb_device_handle *handle,
         char    *mbr_fid = (char*) "nand_mbr";
         int     mbr_fd, mbr_part_cnt = part_cnt;
 
+//      2016-05-05: Calc increment from NAND info.
+
+    parts_incr = NandInfo.PlaneCountPerDie *
+                 NandInfo.SectorCountPerPage *
+                 NandInfo.PageCountPerPhyBlk;
+    printf ("NAND planes = %d\n", NandInfo.PlaneCountPerDie);
+    printf ("NAND sectors/page = %d\n", NandInfo.SectorCountPerPage);
+    printf ("NAND pages/block = %d\n", NandInfo.PageCountPerPhyBlk);
+    printf ("NAND partition key & size increment = %d\n", parts_incr);
+    if (parts_incr < 256)
+      {
+        parts_incr = 256;
+        printf ("Oops, increment calcs failed, using %d\n", parts_incr);
+      }
+
     for (x = 0; x < part_cnt; x++)
       {
         if (part_start [x] < parts_end)
             part_start [x] = parts_end;                 // start sector
-        parts_end = part_start [x] + part_secs [x];
-        parts_end += parts_incr - 1;                    // 128kB multiples
+        parts_end = part_start [x] + part_size [x];
+        parts_end += parts_incr - 1;                    // 4MiB multiples
         parts_end /= parts_incr;
         parts_end *= parts_incr;
+        part_secs [x] = parts_end - part_start [x];     // secs = size + padding
         part_type [x] = 0;
         in = part_name [x];                             // file name
         if ((char*) NULL < (in1 = strrchr (in, '/')))   // skip all '/'
@@ -508,7 +532,7 @@ int     LoadNAND            (libusb_device_handle *handle,
     close (mbr_fd);
 
     fin = fopen (mbr_fid, "rb");                        // write MBR to NAND
-    PutSomeNAND (handle, mbr_fid, fin, 0, 0, 1);
+    PutSomeNAND (handle, mbr_fid, fin, 0, parts_incr, 1);
     fclose (fin);
 
     for (x = 0; x < part_cnt; x++)                      // write partitions to NAND

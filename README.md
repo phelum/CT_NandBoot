@@ -74,3 +74,8 @@ Example:
 
 bootfix will create the MBR then the three partitions (bootloader, rootfs, data).
 
+2016-05-05 fix: Partitions are now aligned to super-blocks to avoid alignment error
+warnings when booting.  This avoids the chance of affecting a partition when updating
+an adjacent partition.
+
+

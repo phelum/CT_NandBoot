@@ -9,6 +9,7 @@ typedef struct tag_NandInfo                     // 256 bytes
     __u32               u10000200;              // 0000 0x10000200
     __u32               zeroes [6];             // 0004
     __u32               one_0;                  // 001C 0x01
+#if 0
     __u16               ChipCnt;                // 0020 0x01
     __u16               ChipConnectInfo;        // 0022 0x01
     __u8                RbCnt;                  // 0024 0x01
@@ -29,6 +30,28 @@ typedef struct tag_NandInfo                     // 256 bytes
     __u32               ReadRetryType;          // 0044 0x010604
     __u32               DDRType;                // 0048 0x0
     __u8                unk_c [132];            // 004C
+#else
+    __u32               ChipCnt;                // 0020 0x01
+    __u32               ChipConnectInfo;        // 0024 0x01
+    __u32               RbCnt;                  // 0028 0x01
+    __u32               RbConnectInfo;          // 002C 0x01
+    __u32               RbConnectMode;          // 0030 0x01
+    __u32               BankCntPerChip;         // 0034 0x01
+    __u32               DieCntPerChip;          // 0038 0x01
+    __u32               PlaneCountPerDie;       // 003C 0x02
+    __u32               SectorCountPerPage;     // 0040 0x10
+    __u32               PageCountPerPhyBlk;     // 0044 0x0100
+    __u32               BlockCountPerDie;       // 0048 0x0800
+    __u32               OperationOpt;           // 004C 0x1188
+    __u32               FrequencePar;           // 0050 0x1E
+    __u32               EccMode;                // 0054 0x03
+    __u8                NandChipID [8];         // 0058 0xDA94D7AD 0xFFFFFFFF
+    __u32               ValidBlockRatio;        // 0060 0x03B0
+    __u32               GoodBlockRatio;         // 0064 0x03B0
+    __u32               ReadRetryType;          // 0068 0x010604
+    __u32               DDRType;                // 006C 0x0
+    __u8                unk_c [96];             // 0070
+#endif
     __u32               SectorCount;            // 00D0 0x760000
     __u32               unk_d [11];             // 00D4
 }
